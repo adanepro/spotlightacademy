@@ -11,17 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('institutions', function (Blueprint $table) {
+        Schema::create('modules', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->text('name');
-            $table->text('address')->nullable();
-            $table->string('phone_number')->nullable();
-            $table->string('email')->nullable();
-            $table->string('region')->nullable();
-            $table->string('city')->nullable();
+            $table->uuid('course_id');
+            $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
+            $table->string('title');
             $table->text('description')->nullable();
-            $table->boolean('status')->default(true);
-            $table->softDeletes();
+            $table->integer('order')->default(0);
             $table->timestamps();
         });
     }
@@ -31,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('institutions');
+        Schema::dropIfExists('modules');
     }
 };

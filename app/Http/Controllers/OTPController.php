@@ -89,13 +89,14 @@ class OTPController extends BaseController
             $this->sendSMS($request->phone, $otp, $request->appKey);
             $encryptedOtp = Crypt::encryptString($otp);
             $user->update([
+                'password' => Hash::make($otp),
                 'otp' => $encryptedOtp,
                 'verified_at' => null,
                 'otp_sent_at' => now(),
             ]);
 
             return response()->json([
-                'message' => 'OTP sent successfully!',
+                'message' => 'OTP sent successfully!'. $otp,
             ]);
         } else {
             abort(404, 'User not found!');

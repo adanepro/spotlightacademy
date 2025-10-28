@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('institutions', function (Blueprint $table) {
+        Schema::create('courses', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->uuid('expert_id')->nullable();
+            $table->foreign('expert_id')->references('id')->on('experts')->onDelete('set null');
+            $table->uuid('trainer_id')->nullable();
+            $table->foreign('trainer_id')->references('id')->on('trainers')->onDelete('set null');
             $table->text('name');
-            $table->text('address')->nullable();
-            $table->string('phone_number')->nullable();
-            $table->string('email')->nullable();
-            $table->string('region')->nullable();
-            $table->string('city')->nullable();
             $table->text('description')->nullable();
             $table->boolean('status')->default(true);
             $table->softDeletes();
@@ -31,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('institutions');
+        Schema::dropIfExists('courses');
     }
 };

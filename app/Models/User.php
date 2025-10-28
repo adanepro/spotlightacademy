@@ -44,6 +44,7 @@ class User extends Authenticatable implements JWTSubject, HasMedia
         'otp',
         'otp_sent_at',
         'verified_at',
+        'type',
     ];
 
     public function getJWTIdentifier()
@@ -124,9 +125,24 @@ class User extends Authenticatable implements JWTSubject, HasMedia
         return $username;
     }
 
-    // Expert has many courses
+    //Expert has many courses
     public function courses()
     {
         return $this->hasMany(Course::class, 'expert_id');
+    }
+
+    public function expert()
+    {
+        return $this->hasOne(Expert::class);
+    }
+
+    public function trainer()
+    {
+        return $this->hasOne(Trainer::class);
+    }
+
+    public function student()
+    {
+        return $this->hasOne(Student::class);
     }
 }

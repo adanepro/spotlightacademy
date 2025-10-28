@@ -1,15 +1,29 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\AdminDashBoardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\ExpertController;
+use App\Http\Controllers\ExpertControllers\CourseContentWizardController;
+use App\Http\Controllers\ExpertControllers\CourseLectureController;
+use App\Http\Controllers\ExpertControllers\CourseLectureMaterialController;
+use App\Http\Controllers\ExpertControllers\CourseModuleController;
+use App\Http\Controllers\ExpertControllers\ExpertDashboardController;
+use App\Http\Controllers\InstitutionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OTPController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentControllers\EnrollmentController;
+use App\Http\Controllers\TrainerController;
+use App\Http\Controllers\TrainerControllers\CourseQuizeController;
+use App\Http\Controllers\TrainerControllers\ExamController;
+use App\Http\Controllers\TrainerControllers\ProjectController;
+use App\Http\Controllers\TrainerControllers\TrainerDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::group([
@@ -65,16 +79,129 @@ Route::group([
 
         Route::get('get-activity-logs', [ActivityLogController::class, 'index']);
 
-        /**
-         * Course Endpoints */
-        Route::resource('courses', CourseController::class);
+        Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
+        Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
 
         /**
-         * Expert Endpoints */
-        Route::get('experts', [ExpertController::class, 'index']);
-        Route::get('expert/{expert}', [ExpertController::class, 'show']);
-        Route::post('expert', [ExpertController::class, 'store']);
-        Route::put('expert/{expert}', [ExpertController::class, 'update']);
+         * Admin Controller Course Endpoints */
+        Route::resource('courses', CourseController::class);
+        Route::get('courses/expert/{expert}', [CourseController::class, 'getCourseByExpert']);
+        Route::get('courses/trainer/{trainer}', [CourseController::class, 'getCourseByTrainer']);
+
+        /**
+         * Admin Controller Expert Endpoints */
+        Route::resource('experts', ExpertController::class);
+        Route::get('experts/course/{course}', [ExpertController::class, 'getExpertByCourse']);
+        Route::get('expert/index-experts-without-course', [ExpertController::class, 'indexExpertsWithoutCourse']);
+
+        /**
+         * Admin ControllerInstitution Endpoints */
+        Route::resource('institutions', InstitutionController::class);
+        Route::post('institutions/{institution}/bulk-import-students', [InstitutionController::class, 'bulkImportStudent']);
+        Route::post('institutions/{institution}/add-student', [InstitutionController::class, 'addStudent']);
+        Route::get('institutions/{institution}/students', [InstitutionController::class, 'getStudents']);
+        Route::post('institutions/{institution}/add-trainer', [InstitutionController::class, 'addTrainer']);
+        Route::post('institutions/{institution}/bulk-import-trainers', [InstitutionController::class, 'bulkImportTrainer']);
+        Route::get('institutions/{institution}/trainers', [InstitutionController::class, 'getTrainers']);
+
+        /**
+         * Admin Controller Trainer Endpoints */
+        Route::resource('trainers', TrainerController::class);
+        Route::post('trainers/bulk-import', [TrainerController::class, 'bulkImportTrainer']);
+        Route::get('trainers/institution/{institution}', [TrainerController::class, 'getTrainerByInstitution']);
+        Route::get('trainers/course/{course}', [TrainerController::class, 'getTrainersByCourse']);
+        Route::get('trainer/index-trainers-without-course', [TrainerController::class, 'indexTrainersWithoutCourse']);
+        Route::get('trainer/index-trainers-without-institution', [TrainerController::class, 'indexTrainerWithoutInstitution']);
+
+        /**
+         * Admin Controller Student Endpoints */
+        Route::resource('students', StudentController::class);
+        Route::post('students/bulk-import', [StudentController::class, 'bulkImport']);
+        Route::get('students/institution/{institution}', [StudentController::class, 'getStudentByInstitution']);
+
+
+        /**
+         * Expert Endpoints  */
+
+        /**
+         * Dashboard Controller */
+
+        Route::get('expert/status-overview', [ExpertDashboardController::class, 'getStatusOverview']);
+        Route::get('expert/assigned-courses', [ExpertDashboardController::class, 'getAssignedCourses']);
+        Route::get('expert/courses/{course}', [ExpertDashboardController::class, 'show']);
+
+        /**
+         * Course Content Wizard Controller */
+        Route::post('expert/courses/{course}/content-wizard', [CourseContentWizardController::class, 'storeWizard']);
+
+        /**
+         * Course Module Controller */
+
+        Route::get('expert/courses/{course}/modules', [CourseModuleController::class, 'index']);
+        Route::post('expert/courses/{course}/modules', [CourseModuleController::class, 'store']);
+        Route::get('expert/courses/{course}/modules/{module}', [CourseModuleController::class, 'show']);
+        Route::put('expert/courses/{course}/modules/{module}', [CourseModuleController::class, 'update']);
+        Route::delete('expert/course/{course}/module/{module}', [CourseModuleController::class, 'destroy']);
+
+        /**
+         * Course Lecture Controller */
+        Route::get('expert/courses/{course}/modules/{module}/lectures', [CourseLectureController::class, 'index']);
+        Route::post('expert/courses/{course}/modules/{module}/lectures', [CourseLectureController::class, 'store']);
+        Route::get('expert/courses/{course}/modules/{module}/lectures/{lecture}', [CourseLectureController::class, 'show']);
+        Route::put('expert/courses/{course}/modules/{module}/lectures/{lecture}', [CourseLectureController::class, 'update']);
+        Route::delete('expert/courses/{course}/modules/{module}/lectures/{lecture}', [CourseLectureController::class, 'destroy']);
+
+
+        /**
+         * Course Lecture Material Controller
+          */
+
+        Route::get('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials', [CourseLectureMaterialController::class, 'index']);
+        Route::post('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials', [CourseLectureMaterialController::class, 'store']);
+        Route::get('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials/{material}', [CourseLectureMaterialController::class, 'show']);
+        Route::put('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials/{material}', [CourseLectureMaterialController::class, 'update']);
+        Route::delete('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials/{material}', [CourseLectureMaterialController::class, 'destroy']);
+
+
+        /**
+         * Trainer Endpoints  */
+        Route::get('trainer/status-overview', [TrainerDashboardController::class, 'getStatusOverview']);
+        Route::get('trainer/assigned-courses', [TrainerDashboardController::class, 'getAssignedCourses']);
+        Route::get('trainer/courses/{course}', [TrainerDashboardController::class, 'show']);
+
+
+        /**
+         * Course Quiz Controller
+         */
+        Route::get('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'index']);
+        Route::post('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'store']);
+        Route::get('trainer/courses/{course}/modules/{module}/quizzes/{quiz}', [CourseQuizeController::class, 'show']);
+        Route::put('trainer/courses/{course}/modules/{module}/quizzes/{quiz}', [CourseQuizeController::class, 'update']);
+        Route::delete('trainer/courses/{course}/modules/{module}/quizzes/{quiz}', [CourseQuizeController::class, 'destroy']);
+
+
+        /**
+         * Course Project Controller
+         */
+        Route::get('trainer/courses/{course}/projects', [ProjectController::class, 'index']);
+        Route::post('trainer/courses/{course}/projects', [ProjectController::class, 'store']);
+        Route::get('trainer/courses/{course}/projects/{project}', [ProjectController::class, 'show']);
+        Route::put('trainer/courses/{course}/projects/{project}', [ProjectController::class, 'update']);
+        Route::delete('trainer/courses/{course}/projects/{project}', [ProjectController::class, 'destroy']);
+
+        /**
+         * Course Exam Controller
+         */
+        Route::get('trainer/exams', [ExamController::class, 'index']);
+        Route::post('trainer/courses/{course}/exams', [ExamController::class, 'store']);
+        Route::get('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'show']);
+        Route::put('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'update']);
+        Route::delete('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'destroy']);
+
+
+        /**
+         * Student Endpoints  */
+        Route::post('students/start-learning', [EnrollmentController::class, 'enroll']);
 
     });
 });

@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('institutions', function (Blueprint $table) {
+        Schema::create('experts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->text('name');
-            $table->text('address')->nullable();
-            $table->string('phone_number')->nullable();
-            $table->string('email')->nullable();
-            $table->string('region')->nullable();
-            $table->string('city')->nullable();
-            $table->text('description')->nullable();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            $table->string('qualification')->nullable();
+            $table->json('social_links')->nullable();
+            $table->json('expertise')->nullable();
+            $table->json('certifications')->nullable();
+            $table->text('bio')->nullable();
             $table->boolean('status')->default(true);
             $table->softDeletes();
             $table->timestamps();
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('institutions');
+        Schema::dropIfExists('experts');
     }
 };
