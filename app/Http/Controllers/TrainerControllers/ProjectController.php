@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\TrainerControllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\NotificationController;
 use App\Models\Course;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class ProjectController extends Controller
+class ProjectController extends NotificationController
 {
     public function index()
     {
@@ -33,6 +34,7 @@ class ProjectController extends Controller
 
     public function store(Request $request, Course $course)
     {
+        $trainerInstitutionId = Auth::user()->trainer->institution_id;
         if (!Auth::user()->trainer) {
             return response()->json([
                 'status' => 'error',
@@ -65,6 +67,28 @@ class ProjectController extends Controller
                 'to' => $validated['to'] ?? null,
             ]);
             DB::commit();
+
+            $users = User::whereHas('roles', function ($query) {
+                $query->where('name', 'Student');
+            })
+                ->whereHas('student', function ($query) use ($trainerInstitutionId) {
+                    $query->where('institution_id', $trainerInstitutionId);
+                })
+                ->get();
+
+            $body = [
+                'title' => 'New Project',
+                'body' => [
+                    'message' => 'A new project has been created for ' . $course->name . '.',
+                    'title' => $project->title,
+                    'from' => $project->from,
+                    'to' => $project->to,
+                ],
+            ];
+
+            foreach ($users as $user) {
+                $this->notify($body, $user);
+            }
 
             return response()->json([
                 'status' => 'success',

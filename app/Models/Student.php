@@ -33,4 +33,11 @@ class Student extends Model implements HasMedia
     {
         return $this->hasMany(Enrollment::class);
     }
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'enrollments', 'student_id', 'course_id')
+            ->withPivot('started_at', 'status', 'completed_at', 'progress')
+            ->withTimestamps();
+    }
 }

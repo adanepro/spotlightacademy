@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Enrollment extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsActivity;
 
     protected $fillable = [
         'student_id',
@@ -39,12 +41,83 @@ class Enrollment extends Model
         return $this->hasMany(EnrollmentModule::class);
     }
 
+    public function projectSubmissions()
+    {
+        return $this->hasMany(ProjectSubmission::class);
+    }
+
+    public function examSubmissions()
+    {
+        return $this->hasMany(ExamSubmission::class);
+    }
+
+    public function quizSubmissions()
+    {
+        return $this->hasMany(QuizSubmission::class);
+    }
+
+    public function quizzes()
+    {
+        return $this->hasMany(EnrollmentQuiz::class);
+    }
+
+    public function projects()
+    {
+        return $this->hasMany(EnrollmentProject::class);
+    }
+
+    public function exams()
+    {
+        return $this->hasMany(EnrollmentExam::class);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults();
+    }
+
+
     public function calculateProgress()
     {
-        $totalModules = $this->modules()->count() ?? 0;
+        // Get all modules
+        $modules = $this->modules()->with('lectures')->get();
 
-        $completedModules = $this->modules()->where('status', 'completed')->sum('progress') ?? 0;
+        // Flatten all lectures from modules
+        $lectures = $modules->flatMap->lectures;
 
-        return round(($completedModules / $totalModules) * 100, 2) ?? 0;
+        // Lectures
+        $totalLectures = $lectures->count();
+        $completedLecturesProgress = $lectures->where('status', 'completed')->sum('progress');
+
+        // Modules
+        $totalModules = $modules->count();
+        $completedModulesProgress = $modules->where('status', 'completed')->sum('progress');
+
+        // Projects
+        $projects = $this->projectSubmissions()->get();
+        $totalProjects = $projects->count();
+        $completedProjects = $projects->where('status', 'passed')->count();
+
+        // Exams
+        $exams = $this->examSubmissions()->get();
+        $totalExams = $exams->count();
+        $completedExams = $exams->where('status', 'passed')->count();
+
+        // Quizzes
+        $quizzes = $this->quizSubmissions()->get();
+        $totalQuizzes = $quizzes->count();
+        $completedQuizzes = $quizzes->where('status', 'passed')->count();
+
+        // Total items
+        $totalItems = $totalModules + $totalProjects + $totalExams + $totalQuizzes + $totalLectures;
+        if ($totalItems === 0) return 0;
+
+        // Total progress
+        $progressSum = $completedModulesProgress + $completedLecturesProgress +
+            ($completedProjects * 100) +
+            ($completedExams * 100) +
+            ($completedQuizzes * 100);
+
+        return round($progressSum / $totalItems, 2);
     }
 }

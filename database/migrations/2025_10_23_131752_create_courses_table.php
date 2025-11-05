@@ -15,11 +15,9 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('expert_id')->nullable();
             $table->foreign('expert_id')->references('id')->on('experts')->onDelete('set null');
-            $table->uuid('trainer_id')->nullable();
-            $table->foreign('trainer_id')->references('id')->on('trainers')->onDelete('set null');
             $table->text('name');
-            $table->text('description')->nullable();
-            $table->boolean('status')->default(true);
+            $table->longText('description')->nullable();
+            $table->enum('status', ['draft', 'published', 'archived'])->default('draft');
             $table->softDeletes();
             $table->timestamps();
         });

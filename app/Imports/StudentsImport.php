@@ -37,7 +37,7 @@ class StudentsImport implements ToCollection, WithHeadingRow
                 'full_name'    => trim($row['full_name'] ?? ''),
                 'email'        => trim($row['email'] ?? ''),
                 'phone_number' => trim($row['phone_number'] ?? ''),
-                'password'     => $row['password'] ?? 'password123',
+                'password'     => $row['password'] ?? 'password',
                 'address'      => $row['address'] ?? null,
                 'age'          => $row['age'] ?? null,
                 'gender'       => $row['gender'] ?? null,

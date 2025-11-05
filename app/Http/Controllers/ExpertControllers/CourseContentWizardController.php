@@ -38,6 +38,7 @@ class CourseContentWizardController extends Controller
             'modules.*.lectures.*.materials.*.title' => 'required|string|max:255',
             'modules.*.lectures.*.materials.*.order' => 'required|integer|min:1',
             'modules.*.lectures.*.materials.*.lecture_notes' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx|max:10240',
+            'status' => 'required|in:draft,published,archived',
         ]);
 
         try {
@@ -79,6 +80,8 @@ class CourseContentWizardController extends Controller
                         }
                     }
                 }
+
+                $course->update(['status' => $validated['status']]);
 
                 $savedModules[] = $module->load('course', 'lectures.materials');
             }

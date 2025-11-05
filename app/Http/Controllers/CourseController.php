@@ -13,9 +13,13 @@ class CourseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $courses = Course::with('expert', 'trainers')->latest()->paginate(10);
+        // search by course name(both capital or small letter)
+        $courses = Course::when($request->search, function ($query, $search) {
+            return $query->where('name', 'ilike', "%$search%")
+                ->orWhere('description', 'ilike', "%$search%");
+        })->with('expert', 'trainers')->latest()->paginate(10);
 
         $formattedCourses = $courses->getCollection()->map(function ($course) {
             return [
@@ -23,10 +27,7 @@ class CourseController extends Controller
                 'course_name' => $course->name,
                 'expert_id' => $course->expert_id,
                 'expert_name' => $course->expert->user->full_name ?? null,
-                'trainer_id' => $course->trainer_id ?? null,
-                'trainer_name' => $course->trainer->user->full_name ?? null,
                 'trainer_count' => optional($course->trainers)->count() ?? 0,
-                'student_count' => optional($course->students)->count() ?? 0,
                 'description' => $course->description,
                 'status' => $course->status,
                 'course_image' => $course->course_image,
@@ -50,12 +51,10 @@ class CourseController extends Controller
      */
     public function store(Request $request)
     {
-        $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
         $validated = $request->validate([
             'expert_id' => 'required|exists:experts,id',
             'name' => 'required|string',
             'description' => 'nullable|string',
-            'status' => 'required|boolean',
             'course_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
             'course_trailer' => 'nullable|file|mimes:mp4,avi,flv,wmv,webm',
         ]);
@@ -67,7 +66,7 @@ class CourseController extends Controller
                 'expert_id' => $validated['expert_id'],
                 'name' => $validated['name'],
                 'description' => $validated['description'],
-                'status' => $validated['status'],
+                'status' => 'draft',
             ]);
 
             DB::commit();
@@ -88,8 +87,6 @@ class CourseController extends Controller
                     'course_name' => $course->name,
                     'expert_id' => $course->expert_id,
                     'expert_name' => $course->expert->user->full_name ?? null,
-                    'trainer_id' => $course->trainer_id ?? null,
-                    'trainer_name' => $course->trainer->user->full_name ?? null,
                     'description' => $course->description,
                     'status' => $course->status,
                     'course_image' => $course->course_image,
@@ -110,10 +107,6 @@ class CourseController extends Controller
      */
     public function show(Course $course)
     {
-        //get trainers who has this course assigned
-        $trainers = Trainer::whereHas('courses', function ($query) use ($course) {
-            $query->where('course_id', $course->id);
-        })->get();
         $module = optional($course->modules)->count() ?? 0;
         $lectures = $course->modules->sum(function ($module) {
             return optional($module->lectures)->count() ?? 0;
@@ -123,12 +116,15 @@ class CourseController extends Controller
                 return optional($lecture->materials)->count() ?? 0;
             });
         });
-        $quizes = $course->modules->sum(function ($module) {
-            return optional($module->quizes)->count() ?? 0;
+        $quizzes = $course->modules->sum(function ($module) {
+            return optional($module->quizzes)->count() ?? 0;
         });
         $exams = optional($course->exams)->count() ?? 0;
         $projects = optional($course->projects)->count() ?? 0;
         $course->load(['modules.lectures.materials']);
+        $course->load(['modules.quizzes']);
+        $course->load(['exams']);
+        $course->load(['projects']);
         return response()->json([
             'status' => 'success',
             'message' => 'Course fetched successfully',
@@ -141,7 +137,7 @@ class CourseController extends Controller
                 'course_trailer' => $course->course_trailer,
                 'expert_id' => $course->expert_id,
                 'expert_name' => $course->expert->user->full_name ?? null,
-                'trainers' => $trainers->map(function ($trainer) {
+                'trainers' => $course->trainers->map(function ($trainer) {
                     return [
                         'trainer_id' => $trainer->id,
                         'user_id' => $trainer->user->id,
@@ -154,7 +150,7 @@ class CourseController extends Controller
                 'modules_count' => $module,
                 'lectures_count' => $lectures,
                 'materials_count' => $materials,
-                'quizes_count' => $quizes,
+                'quizzes_count' => $quizzes,
                 'exams_count' => $exams,
                 'projects_count' => $projects,
                 'modules' => $course->modules->map(function ($module) {
@@ -181,6 +177,39 @@ class CourseController extends Controller
                         }),
                     ];
                 }),
+                'quizzes' => $course->modules->map(function ($module) {
+                    return [
+                        'module_id' => $module->id,
+                        'quizzes' => $module->quizzes->map(function ($quiz) {
+                            return [
+                                'quiz_id' => $quiz->id,
+                                'questions' => $quiz->questions,
+                                'created_by' => $quiz->createdBy->user->full_name,
+                            ];
+                        }),
+                    ];
+                }),
+                'projects' => $course->projects->map(function ($project) {
+                    return [
+                        'project_id' => $project->id,
+                        'title' => $project->title,
+                        'description' => $project->description,
+                        'start_date' => $project->start_date,
+                        'end_date' => $project->end_date,
+                        'created_by' => $project->createdBy->user->full_name,
+                    ];
+                }),
+                'exams' => $course->exams->map(function ($exam) {
+                    return [
+                        'exam_id' => $exam->id,
+                        'title' => $exam->title,
+                        'description' => $exam->description,
+                        'start_date' => $exam->start_date,
+                        'end_date' => $exam->end_date,
+                        'duration_minutes' => $exam->duration_minutes,
+                        'created_by' => $exam->createdBy->user->full_name,
+                    ];
+                }),
             ],
         ], 200);
     }
@@ -191,14 +220,13 @@ class CourseController extends Controller
     public function update(Request $request, Course $course)
     {
         try {
-            $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
             $validated = $request->validate([
-                'expert_id' => 'required|exists:experts,id',
-                'name' => 'required|string',
-                'description' => 'nullable|string',
-                'status' => 'required|boolean',
-                'course_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
-                'course_trailer' => 'nullable|file|mimes:mp4,avi,flv,wmv,webm',
+                'expert_id' => 'sometimes|exists:experts,id',
+                'name' => 'sometimes|nullable|string',
+                'description' => 'sometimes|nullable|string',
+                'course_image' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg',
+                'course_trailer' => 'sometimes|nullable|file|mimes:mp4,avi,flv,wmv,webm',
+                'status' => 'sometimes|nullable|in:draft,published,archived',
             ]);
 
             $course->update($validated);

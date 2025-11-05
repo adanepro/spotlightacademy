@@ -66,4 +66,19 @@ class Trainer extends Model implements HasMedia
     {
         return $this->courses()->exists();
     }
+
+    public function projects()
+    {
+        return $this->hasMany(Project::class, 'created_by');
+    }
+
+    public function exams()
+    {
+        return $this->hasMany(Exam::class, 'created_by');
+    }
+
+    public function quizzes()
+    {
+        return $this->hasMany(CourseQuize::class, 'created_by');
+    }
 }

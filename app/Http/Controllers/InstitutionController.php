@@ -121,7 +121,14 @@ class InstitutionController extends Controller
                     'description' => $institution->description,
                     'status' => $institution->status,
                     'logo' => $institution->logo,
-                ]
+                ],
+                'summery' => [
+                    'imported_count' => count($import->imported),
+                    'skipped_count' => count($import->skipped),
+                    'failed_count' => count($import->failed),
+                    'skipped_students' => $import->skipped,
+                    'failed_rows' => $import->failed,
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -254,7 +261,7 @@ class InstitutionController extends Controller
                 })
                 ->with('student')
                 ->latest()
-                ->paginate(10);
+                ->paginate(20);
 
             $formattedStudents = $students->getCollection()->map(function ($user) {
                 return [

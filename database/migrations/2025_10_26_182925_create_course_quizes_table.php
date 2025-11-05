@@ -16,8 +16,12 @@ return new class extends Migration
             $table->uuid('module_id');
             $table->foreign('module_id')->references('id')->on('modules')->onDelete('cascade');
             $table->json('questions');
+            $table->enum('type', ['mcq', 'short_answer'])->default('mcq');
+            $table->integer('duration_minutes')->nullable();
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
+            $table->uuid('created_by');
+            $table->foreign('created_by')->references('id')->on('trainers')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();
         });

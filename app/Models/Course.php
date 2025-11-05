@@ -18,11 +18,6 @@ class Course extends Model implements HasMedia
         'description',
         'status',
     ];
-
-    protected $casts = [
-        'status' => 'boolean',
-    ];
-
     protected $appends = [
         'course_image',
         'course_trailer',
@@ -78,5 +73,12 @@ class Course extends Model implements HasMedia
     public function enrollments()
     {
         return $this->hasMany(Enrollment::class);
+    }
+
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'enrollments', 'course_id', 'student_id')
+            ->withPivot('started_at', 'status', 'completed_at', 'progress')
+            ->withTimestamps();
     }
 }

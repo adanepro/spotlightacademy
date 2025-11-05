@@ -19,8 +19,14 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentControllers\EnrollmentController;
+use App\Http\Controllers\StudentControllers\ExamSubmissionController;
+use App\Http\Controllers\StudentControllers\ProjectSubmissionController;
+use App\Http\Controllers\StudentControllers\QuizSubmissionController;
+use App\Http\Controllers\StudentControllers\ScheduleController;
+use App\Http\Controllers\StudentControllers\StudentDashboardController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\TrainerControllers\CourseQuizeController;
+use App\Http\Controllers\TrainerControllers\EvaluationController;
 use App\Http\Controllers\TrainerControllers\ExamController;
 use App\Http\Controllers\TrainerControllers\ProjectController;
 use App\Http\Controllers\TrainerControllers\TrainerDashboardController;
@@ -78,6 +84,10 @@ Route::group([
         Route::post('assign-role/{user}', [RoleController::class, 'assignRole']);
 
         Route::get('get-activity-logs', [ActivityLogController::class, 'index']);
+        Route::get('engagement-overview', [ActivityLogController::class, 'getEngagmentOverview']);
+        Route::get('learning-progress', [ActivityLogController::class, 'getLearningProgress']);
+        Route::get('session-usage-analytics', [ActivityLogController::class, 'getSessionUsageAnalytics']);
+        Route::get('gender-based-analytics', [ActivityLogController::class, 'getGenderBasedAnalytics']);
 
         Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
         Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
@@ -154,7 +164,7 @@ Route::group([
 
         /**
          * Course Lecture Material Controller
-          */
+         */
 
         Route::get('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials', [CourseLectureMaterialController::class, 'index']);
         Route::post('expert/courses/{course}/modules/{module}/lectures/{lecture}/materials', [CourseLectureMaterialController::class, 'store']);
@@ -200,8 +210,75 @@ Route::group([
 
 
         /**
-         * Student Endpoints  */
-        Route::post('students/start-learning', [EnrollmentController::class, 'enroll']);
+         * Evaluation Controller
+         */
+        Route::get('trainer/projects/{project}/submissions', [EvaluationController::class, 'getProjectSubmissions']);
+        Route::post('trainer/projects/submissions/{enrollmentProject}/evaluate', [EvaluationController::class, 'evaluateProject']);
+        Route::get('trainer/failed-students/projects', [EvaluationController::class, 'getFailedStudentOnProject']);
+        Route::post('trainer/assign-remedial-project', [EvaluationController::class, 'assignRemedialProject']);
 
+        Route::get('trainer/quizzes/{quiz}/submissions', [EvaluationController::class, 'getQuizSubmissions']);
+        Route::post('trainer/quizzes/{quiz}/submissions/{submission}/evaluate', [EvaluationController::class, 'evaluateQuiz']);
+        Route::get('trainer/failed-students/quizzes', [EvaluationController::class, 'getFailedStudentOnQuiz']);
+        Route::post('trainer/assign-remedial-quiz', [EvaluationController::class, 'assignRemedialQuiz']);
+
+        Route::get('trainer/exams/{exam}/submissions', [EvaluationController::class, 'getExamSubmissions']);
+        Route::post('trainer/exams/submissions/{enrollmentExam}/evaluate', [EvaluationController::class, 'evaluateExam']);
+        Route::get('trainer/failed-students/exams', [EvaluationController::class, 'getFailedStudentOnExam']);
+        Route::post('trainer/assign-remedial-exam', [EvaluationController::class, 'assignRemedialExam']);
+
+
+
+        /**
+         * Student Endpoints  */
+
+        /**
+         * Student Dashboard Controller
+         */
+
+        Route::get('students/dashboard/status-overview', [StudentDashboardController::class, 'getStatusOverview']);
+        Route::get('student/courses', [StudentDashboardController::class, 'courseIndex']);
+        Route::get('students/courses/{course}/details', [StudentDashboardController::class, 'courseShow']);
+
+        /**
+         * Enrollment Controller
+         */
+        Route::post('students/start-learning', [EnrollmentController::class, 'enroll']);
+        Route::get('students/my-enrollments', [EnrollmentController::class, 'myEnrollment']);
+        Route::get('students/enrollments/{enrollment}/progress', [EnrollmentController::class, 'getProgress']);
+        Route::post('students/enrollments/{enrollment}/lectures/{enrollmentLecture}/watch', [EnrollmentController::class, 'watchLecture']);
+        Route::post('students/enrollments/{enrollment}/materials/{material}/view', [EnrollmentController::class, 'viewMaterial']);
+        Route::post('enrollments/{enrollment}/materials/{material}/download', [EnrollmentController::class, 'downloadMaterial']);
+
+        Route::get('student/schedule', [ScheduleController::class, 'getSchedule']);
+
+        /**
+         * Project Submission Controller
+         */
+        Route::get('student/project-submissions', [ProjectSubmissionController::class, 'index']);
+        Route::get('student/projects', [ProjectSubmissionController::class, 'allProjects']);
+        Route::get('student/projects/evaluated', [ProjectSubmissionController::class, 'getEvaluatedProjects']);
+        Route::post('student/enrollment-projects/{enrollmentProject}/submit', [ProjectSubmissionController::class, 'submit']);
+        Route::get('student/enrollment-projects/{enrollmentProject}/submission', [ProjectSubmissionController::class, 'show']);
+        Route::get('student/projects/remedial', [ProjectSubmissionController::class, 'getRemedialProjects']);
+
+        /**
+         * Exam Submission Controller
+         */
+        Route::get('student/exam-submissions', [ExamSubmissionController::class, 'index']);
+        Route::get('student/exams', [ExamSubmissionController::class, 'allExams']);
+        Route::get('student/exams/evaluated', [ExamSubmissionController::class, 'getEvaluatedExams']);
+        Route::post('student/enrollment-exams/{enrollmentExam}/submit', [ExamSubmissionController::class, 'submit']);
+        Route::get('student/enrollment-exams/{enrollmentExam}/submission', [ExamSubmissionController::class, 'show']);
+        Route::get('student/exams/remedial', [ExamSubmissionController::class, 'getRemedialExams']);
+
+        /**
+         * Quiz Submission Controller
+         */
+        Route::get('student/quiz-submissions', [QuizSubmissionController::class, 'index']);
+        Route::get('student/quizzes', [QuizSubmissionController::class, 'allQuizzes']);
+        Route::get('student/quizzes/evaluated', [QuizSubmissionController::class, 'getEvaluatedQuizzes']);
+        Route::post('student/enrollment-quizzes/{enrollmentQuiz}/submit', [QuizSubmissionController::class, 'submit']);
+        Route::get('student/enrollment-quizzes/{enrollmentQuiz}/submission', [QuizSubmissionController::class, 'show']);
     });
 });

@@ -16,6 +16,9 @@ return new class extends Migration
             $table->uuid('module_id');
             $table->string('title');
             $table->integer('order')->default(0);
+            $table->foreign('module_id')->references('id')->on('modules')->onDelete('cascade');
+            $table->integer('duration')->default(0);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

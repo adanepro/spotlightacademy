@@ -30,7 +30,7 @@ class CourseFactory extends Factory
             'name' => 'Course ' . $number,
             'expert_id' => $expert->id,
             'description' => $this->faker->paragraph(),
-            'status' => true,
+            'status' => 'published',
         ];
     }
 }

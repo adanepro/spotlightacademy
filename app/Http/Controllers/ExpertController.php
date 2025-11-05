@@ -156,6 +156,30 @@ class ExpertController extends Controller
                 'bio' => $expert->bio,
                 'type' => $expert->user->type ?? null,
                 'is_assigned' => $expert->is_assigned,
+                'courses' => optional($expert->courses)->map(function ($course) {
+                    return [
+                        'course_id' => $course->id,
+                        'course_name' => $course->name,
+                    ];
+                }) ?? [],
+                // count modules this expert created
+                'modules_count' => optional($expert->courses)->sum(function ($course) {
+                    return $course->modules->count();
+                }),
+                // count lectures this expert created
+                'lectures_count' => optional($expert->courses)->sum(function ($course) {
+                    return $course->modules->sum(function ($module) {
+                        return $module->lectures->count();
+                    });
+                }),
+                // count materials this expert created
+                'materials_count' => optional($expert->courses)->sum(function ($course) {
+                    return $course->modules->sum(function ($module) {
+                        return $module->lectures->sum(function ($lecture) {
+                            return $lecture->materials->count();
+                        });
+                    });
+                }),
             ],
         ]);
     }

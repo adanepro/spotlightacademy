@@ -16,9 +16,14 @@ return new class extends Migration
             $table->uuid('course_id');
             $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
             $table->string('title');
-            $table->longText('description')->nullable();
-            $table->dateTime('scheduled_at')->nullable();
+            $table->json('questions')->nullable();
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
+            $table->enum('status', ['upcoming', 'ongoing', 'closed'])->default('upcoming');
             $table->integer('duration_minutes')->nullable();
+            $table->enum('type', ['mcq', 'short_answer'])->default('mcq');
+            $table->uuid('created_by');
+            $table->foreign('created_by')->references('id')->on('trainers')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();
         });

@@ -32,6 +32,12 @@ class DatabaseSeeder extends Seeder
             CourseSeeder::class,
             TrainerSeeder::class,
             StudentSeeder::class,
+            ModuleSeeder::class,
+            LectureSeeder::class,
+            LectureMaterialSeeder::class,
+            ProjectSeeder::class,
+            ExamSeeder::class,
+            QuizSeeder::class,
         ]);
     }
 }

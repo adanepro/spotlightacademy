@@ -28,7 +28,7 @@ class TrainerDashboardController extends Controller
 
         $quizzesCount = $trainer->courses->sum(function ($course) {
             return optional($course->modules)->sum(function ($module) {
-                return optional($module->quizes)->count() ?? 0;
+                return optional($module->quizzes)->count() ?? 0;
             }) ?? 0;
         });
 
@@ -55,7 +55,8 @@ class TrainerDashboardController extends Controller
                 'message' => 'Unauthorized access. User is not a trainer.',
             ], 403);
         }
-        $assignedCourses = Auth::user()->trainer->courses()->get();
+
+        $assignedCourses = Auth::user()->trainer->courses()->where('status', 'published')->get();
 
         $formattedCourses = $assignedCourses->map(function ($course) {
             return [
@@ -66,18 +67,22 @@ class TrainerDashboardController extends Controller
                 'status' => $course->status,
                 'modules_created' => $course->modules->count(),
                 'total_video_lectures' => $course->modules->sum(function ($module) {
-                    return $module->lectures->count();
+                    return optional($module->lectures)->count() ?? 0;
+                    // return $module->lectures->count();
                 }),
                 'total_lecture_notes' => $course->modules->sum(function ($module) {
                     return $module->lectures->sum(function ($lecture) {
-                        return $lecture->materials->count();
+                        return optional($lecture->materials)->count() ?? 0;
+                        //return $lecture->materials->count();
                     });
                 }),
-                'total_quizes' => $course->modules->sum(function ($module) {
-                    return $module->quizes->count();
+                'total_quizzes' => $course->modules->sum(function ($module) {
+                    return optional($module->quizzes)->count() ?? 0;
+                    //return $module->quizzes->count();
                 }),
-                'total_exams' => $course->exams->count(),
-                'total_projects' => $course->projects->count(),
+                'total_exams' => optional($course->exams)->count() ?? 0,
+                // 'total_exams' =>     $course->exams->count(),
+                'total_projects' => optional($course->projects)->count() ?? 0,
             ];
         });
 
@@ -90,7 +95,14 @@ class TrainerDashboardController extends Controller
 
     public function show(Course $course)
     {
-        $course = $course->load(['modules.quizes', 'modules.lectures.materials']);
+        $trainerId = Auth::user()->trainer->id;
+        $course = $course->load(['modules.quizzes', 'modules.lectures.materials', 'projects', 'exams']);
+
+        $projects = $course->projects()->where('created_by', $trainerId)->get();
+        $exams = $course->exams()->where('created_by', $trainerId)->get();
+        $quizzes = $course->modules->flatMap(function ($module) use ($trainerId) {
+            return $module->quizzes->where('created_by', $trainerId);
+        });
 
         return response()->json([
             'status' => 'success',
@@ -108,7 +120,7 @@ class TrainerDashboardController extends Controller
                         'title' => $module->title,
                         'description' => $module->description,
                         'order' => $module->order,
-                        'quizes' => $module->quizes->map(function ($quiz) {
+                        'quizzes' => $module->quizzes->map(function ($quiz) {
                             return [
                                 'quiz_id' => $quiz->id,
                                 'questions' => $quiz->questions,
@@ -132,6 +144,27 @@ class TrainerDashboardController extends Controller
                                 }),
                             ];
                         }),
+                    ];
+                }),
+
+                'projects' => $projects->map(function ($project) {
+                    return [
+                        'project_id' => $project->id,
+                        'title' => $project->title,
+                        'description' => $project->description,
+                        'start_date' => $project->start_date,
+                        'end_date' => $project->end_date,
+                    ];
+                }),
+
+                'exams' => $exams->map(function ($exam) {
+                    return [
+                        'exam_id' => $exam->id,
+                        'title' => $exam->title,
+                        'questions' => $exam->questions,
+                        'start_date' => $exam->start_date,
+                        'end_date' => $exam->end_date,
+                        'duration_minutes' => $exam->duration_minutes,
                     ];
                 }),
             ],

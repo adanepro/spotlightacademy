@@ -94,13 +94,18 @@ class AuthController extends Controller
             // Test
             return response()->json([
                 'message' => 'Account not verified. OTP sent to your phone.',
-                 'otp' => $otp, // remove in production
+                'otp' => $otp, // remove in production
             ], 403);
         }
 
         if (! $token = Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 400);
         }
+
+        activity()
+            ->causedBy(Auth::user())
+            ->log('logged in')
+            ->subject(Auth::user());
 
         return $this->respondWithToken($token);
     }
@@ -170,6 +175,10 @@ class AuthController extends Controller
     {
 
         Auth::logout();
+
+        activity()
+            ->causedBy(Auth::user())
+            ->log('logged out');
 
         return response()->json(['message' => 'Successfully logged out']);
     }

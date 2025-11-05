@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Module extends Model
 {
-    use HasUuids;
+    use HasUuids, HasFactory;
     protected $fillable = [
         'course_id',
         'title',
@@ -25,7 +26,7 @@ class Module extends Model
         return $this->hasMany(Lecture::class);
     }
 
-    public function quizes()
+    public function quizzes()
     {
         return $this->hasMany(CourseQuize::class);
     }
