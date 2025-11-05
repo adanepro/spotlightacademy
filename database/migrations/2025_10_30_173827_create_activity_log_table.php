@@ -9,7 +9,7 @@ class CreateActivityLogTable extends Migration
     public function up()
     {
         Schema::connection(config('activitylog.database_connection'))->create(config('activitylog.table_name'), function (Blueprint $table) {
-            $table->uuid('id');
+            $table->id('id');
             $table->string('log_name')->nullable();
             $table->text('description');
             $table->nullableuuidMorphs('subject', 'subject');
