@@ -141,6 +141,7 @@ class ExpertDashboardController extends Controller
                 'course_name' => $course->name,
                 'course_image' => $course->course_image,
                 'course_trailer' => $course->course_trailer,
+                'trainers_count' => $course->trainers->count(),
                 'status' => $course->status,
                 'modules_created' => $course->modules->count(),
                 'total_video_lectures' => $course->modules->sum(function ($module) {
