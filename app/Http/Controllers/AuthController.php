@@ -95,6 +95,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Account not verified. OTP sent to your phone.',
                 'otp' => $otp, // remove in production
+                'is_verified' => $user->verified_at !== null,
             ], 403);
         }
 
