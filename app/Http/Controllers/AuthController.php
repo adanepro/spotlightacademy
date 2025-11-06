@@ -224,7 +224,10 @@ class AuthController extends Controller
 
         return response()->json([
             'access_token' => $token,
-            // 'user' => $user->load('roles.permissions'),
+            'user' => [
+                'is_verified' => $user->verified_at !== null,
+                'role' => $user->roles->first()->name ?? null,
+            ],
             'token_type' => 'bearer',
             'expires_in' => Auth::factory()->getTTL() * 60,
         ]);
