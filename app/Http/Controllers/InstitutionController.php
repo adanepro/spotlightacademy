@@ -72,22 +72,23 @@ class InstitutionController extends Controller
      */
     public function store(Request $request)
     {
+
+        $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'address' => 'nullable|string',
+            'phone_number' => 'nullable|string',
+            'email' => 'nullable|email',
+            'region' => 'nullable|string',
+            'city' => 'nullable|string',
+            'description' => 'nullable|string',
+            'status' => 'required|boolean',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
+            'students_file' => 'nullable|file|mimes:csv,xlsx,xls|max:2048',
+            'trainers_file' => 'nullable|file|mimes:csv,xlsx,xls|max:2048',
+        ]);
         try {
             DB::beginTransaction();
-            $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
-            $validated = $request->validate([
-                'name' => 'required|string',
-                'address' => 'nullable|string',
-                'phone_number' => 'nullable|string',
-                'email' => 'nullable|email',
-                'region' => 'nullable|string',
-                'city' => 'nullable|string',
-                'description' => 'nullable|string',
-                'status' => 'required|boolean',
-                'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
-                'students_file' => 'nullable|file|mimes:csv,xlsx,xls|max:2048',
-                'trainers_file' => 'nullable|file|mimes:csv,xlsx,xls|max:2048',
-            ]);
 
             $institution = Institution::create($validated);
 
@@ -387,7 +388,7 @@ class InstitutionController extends Controller
                 ->whereHas('trainer', function ($query) use ($institution) {
                     $query->where('institution_id', $institution->id);
                 })
-                ->with('trainer')
+                ->with('trainer', 'trainer.courses')
                 ->latest()
                 ->paginate(10);
 
@@ -406,6 +407,12 @@ class InstitutionController extends Controller
                     'certifications' => $user->trainer->certifications ?? null,
                     'bio' => $user->trainer->bio ?? null,
                     'type' => $user->type ?? null,
+                    'courses' => $user->trainer->courses->map(function ($course) {
+                        return [
+                            'course_id' => $course->id,
+                            'course_name' => $course->name,
+                        ];
+                    }),
                 ];
             });
 
