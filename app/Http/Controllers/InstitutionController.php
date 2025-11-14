@@ -521,6 +521,9 @@ class InstitutionController extends Controller
                     'student_id' => $student->id,
                     'user_id' => $student->user->id ?? null,
                     'full_name' => $student->user->full_name ?? null,
+                    'username' => $student->user->username ?? null,
+                    'gender' => $student->gender ?? null,
+                    'age' => $student->age ?? null,
                     'email' => $student->user->email ?? null,
                     'phone_number' => $student->user->phone_number ?? null,
                 ];

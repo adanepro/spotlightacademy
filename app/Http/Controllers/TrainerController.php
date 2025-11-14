@@ -175,6 +175,7 @@ class TrainerController extends Controller
                 'trainer_id' => $trainer->id,
                 'user_id' => $trainer->user->id,
                 'institution_id' => $trainer->institution_id,
+                'institution_name' => $trainer->institution->name ?? null,
                 'courses' => optional($trainer->courses)->map(function ($course) {
                     return [
                         'id' => $course->id,
@@ -195,7 +196,7 @@ class TrainerController extends Controller
                 'is_assigned' => $trainer->is_assigned,
                 'quizzes_count' => optional($trainer->quizzes)->count() ?? 0,
                 'projects_count' => optional($trainer->projects)->count() ?? 0,
-                'exams_count' => optional($trainer->exams)->count() ?? 0, 
+                'exams_count' => optional($trainer->exams)->count() ?? 0,
             ],
         ]);
     }
