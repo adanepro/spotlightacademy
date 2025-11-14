@@ -192,7 +192,7 @@ class InstitutionController extends Controller
                 'full_name' => 'required|string',
                 'email' => 'required|email|unique:users,email',
                 'phone_number' => 'required|string|unique:users,phone_number',
-                'password' => 'required|string|min:8',
+                'password' => 'nullable|string|min:8',
                 'address' => 'nullable|string',
                 'age' => 'nullable|integer|min:15|max:80',
                 'gender' => 'nullable|string|in:male,female',

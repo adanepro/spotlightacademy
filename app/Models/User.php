@@ -89,9 +89,21 @@ class User extends Authenticatable implements JWTSubject, HasMedia
         'profile_image',
     ];
 
+    // public function getProfileImageAttribute()
+    // {
+    //     return $this->getMedia('profile_image')->last()?->getUrl() ?? $this->profile_photo_url;
+    // }
+
     public function getProfileImageAttribute()
     {
-        return $this->getMedia('profile_image')->last()?->getUrl() ?? $this->profile_photo_url;
+        // If user has uploaded profile image via Spatie
+        if ($media = $this->getMedia('profile_image')->last()) {
+            return $media->getUrl();
+        }
+
+        // Fallback: generate UI avatar using full_name (or username if not available)
+        $name = urlencode($this->full_name ?? $this->username ?? 'User');
+        return "https://ui-avatars.com/api/?name={$name}&color=7F9CF5&background=EBF4FF";
     }
 
 
