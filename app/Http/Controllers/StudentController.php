@@ -162,15 +162,15 @@ class StudentController extends Controller
             DB::beginTransaction();
             $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
             $validated = $request->validate([
-                'full_name' => 'required|string',
-                'email' => 'required|email|unique:users,email',
-                'phone_number' => 'required|string|unique:users,phone_number',
-                'password' => 'required|string|min:8',
-                'institution_id' => 'required|exists:institutions,id',
-                'address' => 'nullable|string',
-                'age' => 'nullable|integer|min:15|max:80',
-                'gender' => 'nullable|string|in:male,female',
-                'status' => 'required|boolean',
+                'full_name' => 'sometimes|nullable|string',
+                'email' => 'sometimes|nullable|email|unique:users,email',
+                'phone_number' => 'sometimes|nullable|string|unique:users,phone_number',
+                'password' => 'sometimes|nullable|string|min:8',
+                'institution_id' => 'sometimes|nullable|required|exists:institutions,id',
+                'address' => 'sometimes|nullable|string',
+                'age' => 'sometimes|nullable|integer|min:15|max:80',
+                'gender' => 'sometimes|nullable|string|in:male,female',
+                'status' => 'sometimes|nullable|boolean',
             ]);
 
             $student->user->update([
