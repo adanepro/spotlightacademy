@@ -479,15 +479,44 @@ class InstitutionController extends Controller
             $trainerPerPage = $request->get('trainer_per_page', 5);
             $studentPerPage = $request->get('student_per_page', 5);
 
-
-            $trainers = $institution->trainers()
-                ->with('user')
-                ->paginate($trainerPerPage, ['*'], 'trainers_page');
+            $trainerSearch = $request->get('trainer_search', null);
+            $studentSearch = $request->get('student_search', null);
 
 
-            $students = $institution->students()
-                ->with('user')
-                ->paginate($studentPerPage, ['*'], 'students_page');
+            $trainersQuery = $institution->trainers()
+                ->with('user');
+            if ($trainerSearch) {
+                $trainersQuery->where(function ($query) use ($trainerSearch) {
+                    $query->whereHas('user', function ($userQuery) use ($trainerSearch) {
+                        $userQuery->where('full_name', 'like', "%{$trainerSearch}%")
+                            ->orWhere('email', 'like', "%{$trainerSearch}%")
+                            ->orWhere('phone_number', 'like', "%{$trainerSearch}%");
+                    })
+                        ->orWhere('qualification', 'like', "%{$trainerSearch}%")
+                        ->orWhere('bio', 'like', "%{$trainerSearch}%");
+                });
+            }
+
+            $trainers = $trainersQuery->paginate($trainerPerPage, ['*'], 'trainers_page');
+
+
+            $studentsQuery = $institution->students()
+                ->with('user');
+
+            if ($studentSearch) {
+                $studentsQuery->where(function ($query) use ($studentSearch) {
+                    $query->whereHas('user', function ($userQuery) use ($studentSearch) {
+                        $userQuery->where('full_name', 'like', "%{$studentSearch}%")
+                            ->orWhere('username', 'like', "%{$studentSearch}%")
+                            ->orWhere('email', 'like', "%{$studentSearch}%")
+                            ->orWhere('phone_number', 'like', "%{$studentSearch}%");
+                    })
+                        ->orWhere('gender', 'like', "%{$studentSearch}%")
+                        ->orWhere('age', 'like', "%{$studentSearch}%");
+                });
+            }
+
+            $students = $studentsQuery->paginate($studentPerPage, ['*'], 'students_page');
 
             $institutionData = [
                 'institution_id' => $institution->id,
@@ -534,6 +563,10 @@ class InstitutionController extends Controller
                 'message' => 'Institution fetched successfully',
                 'data' => [
                     'institution' => $institutionData,
+                    'search_params' => [
+                        'trainer_search' => $trainerSearch,
+                        'student_search' => $studentSearch,
+                    ],
                     'pagination' => [
                         'trainers' => [
                             'current_page' => $trainers->currentPage(),
