@@ -541,6 +541,7 @@ class InstitutionController extends Controller
                     'phone_number' => $trainer->user->phone_number ?? null,
                     'qualification' => $trainer->qualification ?? null,
                     'bio' => $trainer->bio ?? null,
+                    'profile_image' => $trainer->user->getFirstMediaUrl('profile_image') ?? null,
                 ];
             });
 
@@ -555,6 +556,7 @@ class InstitutionController extends Controller
                     'age' => $student->age ?? null,
                     'email' => $student->user->email ?? null,
                     'phone_number' => $student->user->phone_number ?? null,
+                    'profile_image' => $student->user->getFirstMediaUrl('profile_image') ?? null,
                 ];
             });
 

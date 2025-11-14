@@ -71,7 +71,7 @@ class StudentController extends Controller
                 'full_name' => 'required|string',
                 'email' => 'required|email|unique:users,email',
                 'phone_number' => 'required|string|unique:users,phone_number',
-                'password' => 'required|string|min:8',
+                'password' => 'nullable|string|min:8',
                 'institution_id' => 'required|exists:institutions,id',
                 'address' => 'nullable|string',
                 'age' => 'nullable|integer|min:15|max:80',
