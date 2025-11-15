@@ -320,6 +320,8 @@ class InstitutionController extends Controller
                 'certifications.*' => 'nullable|string',
                 'bio' => 'nullable|string',
                 'status' => 'required|boolean',
+                'course_ids' => 'nullable|array',
+                'course_ids.*' => 'nullable|exists:courses,id',
             ]);
 
             $user = User::create([
@@ -344,6 +346,10 @@ class InstitutionController extends Controller
                 'bio' => $validated['bio'],
                 'status' => $validated['status'],
             ]);
+
+            if (!empty($validated['course_ids'])) {
+                $trainer->courses()->sync($validated['course_ids']);
+            }
 
             DB::commit();
 

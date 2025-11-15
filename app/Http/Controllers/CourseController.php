@@ -19,7 +19,7 @@ class CourseController extends Controller
         $courses = Course::when($request->search, function ($query, $search) {
             return $query->where('name', 'ilike', "%$search%")
                 ->orWhere('description', 'ilike', "%$search%");
-        })->with('expert', 'trainers')->latest()->paginate(10);
+        })->with('expert', 'trainers')->latest()->paginate(20);
 
         $formattedCourses = $courses->getCollection()->map(function ($course) {
             return [
