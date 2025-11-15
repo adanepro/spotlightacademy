@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
 class StudentController extends Controller
@@ -163,8 +164,18 @@ class StudentController extends Controller
             $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
             $validated = $request->validate([
                 'full_name' => 'sometimes|nullable|string',
-                'email' => 'sometimes|nullable|email|unique:users,email',
-                'phone_number' => 'sometimes|nullable|string|unique:users,phone_number',
+                'email' => [
+                    'sometimes',
+                    'nullable',
+                    'email',
+                    Rule::unique('users', 'email')->ignore($student->user->id, 'id'),
+                ],
+                'phone_number' => [
+                    'sometimes',
+                    'nullable',
+                    'string',
+                    Rule::unique('users', 'phone_number')->ignore($student->user->id, 'id'),
+                ],
                 'password' => 'sometimes|nullable|string|min:8',
                 'institution_id' => 'sometimes|nullable|required|exists:institutions,id',
                 'address' => 'sometimes|nullable|string',
