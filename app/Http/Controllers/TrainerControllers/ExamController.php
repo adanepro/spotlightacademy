@@ -126,9 +126,9 @@ class ExamController extends NotificationController
             ];
 
             foreach ($users as $user) {
-                if ($exam->for === 'failed' && $user->student->enrollments->where('course_id', $course->id)->first()->status !== 'failed') {
-                    continue;
-                }
+                // if ($exam->for === 'failed' && $user->student->enrollments->where('course_id', $course->id)->first()->status !== 'failed') {
+                //     continue;
+                // }
                 $this->notify($body, $user);
             }
 
