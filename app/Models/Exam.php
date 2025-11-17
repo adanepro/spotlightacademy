@@ -22,6 +22,7 @@ class Exam extends Model
         'duration_minutes',
         'type',
         'created_by',
+        'for',
     ];
 
     protected $casts = [

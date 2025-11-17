@@ -203,6 +203,7 @@ Route::group([
          * Course Exam Controller
          */
         Route::get('trainer/courses/{course}/exams', [ExamController::class, 'index']);
+        Route::get('trainer/exams', [ExamController::class, 'allExams']);
         Route::post('trainer/courses/{course}/exams', [ExamController::class, 'store']);
         Route::get('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'show']);
         Route::put('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'update']);

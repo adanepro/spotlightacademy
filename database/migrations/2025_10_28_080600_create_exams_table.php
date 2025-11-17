@@ -24,6 +24,7 @@ return new class extends Migration
             $table->enum('type', ['mcq', 'short_answer'])->default('mcq');
             $table->uuid('created_by');
             $table->foreign('created_by')->references('id')->on('trainers')->onDelete('cascade');
+            $table->enum('for', ['all', 'failed'])->default('all');
             $table->softDeletes();
             $table->timestamps();
         });
