@@ -52,7 +52,7 @@ class ExamController extends NotificationController
             return [
                 'exam_id' => $exam->id,
                 'course_id' => $exam->course->id,
-                'course_title' => $exam->course->title,
+                'course_name' => $exam->course->name,
                 'title' => $exam->title,
                 'start_date' => $exam->start_date,
                 'end_date' => $exam->end_date,
@@ -299,7 +299,7 @@ class ExamController extends NotificationController
                 'student_id' => $submission->enrollment->student->id,
                 'student_name' => $submission->enrollment->student->user->full_name,
                 'exam_title' => $submission->exam->title,
-                'course_title' => $submission->course->title ?? null,
+                'course_name' => $submission->course->name ?? null,
                 'status' => $submission->status,
                 'review_comments' => $submission->review_comments,
                 'submitted_at' => $submission->created_at->toDateTimeString(),
@@ -315,6 +315,97 @@ class ExamController extends NotificationController
 
     public function getEvaluatedExams()
     {
-        // user
+        // get all evaluated exams created by the trainer,
+        // display course name, exam title, exam_strat_date, exam_end_date, faild_student_count, passed_student_count, total_student_count
+
+        $trainer = Auth::user()->trainer;
+
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $evaluatedExams = Exam::whereHas('submissions', function ($q) {
+            $q->whereIn('status', ['passed', 'failed']);
+        })
+            ->where('created_by', $trainer->id)
+            ->with(['course', 'submissions'])
+            ->latest()
+            ->get();
+
+        if ($evaluatedExams->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No evaluated exams found.',
+                'data' => [],
+            ], 200);
+        }
+
+        $formatted = $evaluatedExams->map(function ($exam) {
+            return [
+                'exam_id' => $exam->id,
+                'course_name' => $exam->course->name ?? null,
+                'exam_title' => $exam->title,
+                'start_date' => $exam->start_date,
+                'end_date' => $exam->end_date,
+                'failed_student_count' => $exam->submissions->where('status', 'failed')->count(),
+                'passed_student_count' => $exam->submissions->where('status', 'passed')->count(),
+                'total_student_count' => $exam->submissions->count(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Evaluated exams retrieved successfully.',
+            'data' => $formatted,
+        ], 200);
+    }
+
+    public function getEvaluatedExamDetails(Exam $exam)
+    {
+        // get all evaluated exams created by the trainer,
+        // display course name, exam title, all students with their submission status, review comments, submission date
+        $trainer = Auth::user()->trainer;
+
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        if ($exam->created_by !== $trainer->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. Trainer is not the creator of this exam.',
+            ], 403);
+        }
+
+        $submissions = ExamSubmission::where('exam_id', $exam->id)
+            ->with(['enrollment.student', 'media'])
+            ->latest()
+            ->get();
+
+        $formatted = $submissions->map(function ($submission) {
+            return [
+                'exam_title' => $submission->exam->title,
+                'submission_id' => $submission->id,
+                'student_id' => $submission->enrollment->student->id,
+                'student_name' => $submission->enrollment->student->user->full_name,
+                'status' => $submission->status,
+                'progress' => $submission->enrollment->progress,
+                'review_comments' => $submission->review_commens,
+                'submitted_at' => $submission->created_at->toDateTimeString(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exam submissions fetched successfully.',
+            'data' => $formatted,
+        ], 200);
+
     }
 }

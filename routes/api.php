@@ -199,6 +199,10 @@ Route::group([
         Route::put('trainer/courses/{course}/projects/{project}', [ProjectController::class, 'update']);
         Route::delete('trainer/courses/{course}/projects/{project}', [ProjectController::class, 'destroy']);
 
+        Route::get('trainer/projects', [ProjectController::class, 'allProjects']);
+        Route::get('trainer/projects/{project}/details', [ProjectController::class, 'getProjectDetails']);
+        Route::get('trainer/projects/evaluated', [ProjectController::class, 'getEvaluatedProjects']);
+
         /**
          * Course Exam Controller
          */
@@ -209,7 +213,9 @@ Route::group([
         Route::put('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'update']);
         Route::delete('trainer/courses/{course}/exams/{exam}', [ExamController::class, 'destroy']);
 
-
+        Route::get('trainer/exams/{exam}/details', [ExamController::class, 'getEvaluatedExamDetails']);
+        Route::get('trainer/exams/evaluated', [ExamController::class, 'getEvaluatedExams']);
+        Route::get('trainer/exams/failed-students', [ExamController::class, 'getFailedStudentOnExam']);
         /**
          * Evaluation Controller
          */

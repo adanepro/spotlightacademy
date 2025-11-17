@@ -32,6 +32,38 @@ class ProjectController extends NotificationController
         ], 200);
     }
 
+    public function allProjects()
+    {
+        if (!Auth::user()->trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $projects = Project::where('created_by', Auth::user()->trainer->id)
+            ->with(['course'])
+            ->latest()
+            ->get();
+        $projects = $projects->map(function ($project) {
+            return [
+                'project_id' => $project->id,
+                'course_id' => $project->course->id,
+                'course_name' => $project->course->name,
+                'title' => $project->title,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'status' => $project->status,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Projects fetched successfully',
+            'data' => $projects,
+        ], 200);
+    }
+
     public function store(Request $request, Course $course)
     {
         $trainerInstitutionId = Auth::user()->trainer->institution_id;
@@ -52,8 +84,8 @@ class ProjectController extends NotificationController
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'from' => 'nullable|date',
-            'to' => 'nullable|date|after_or_equal:from',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         try {
@@ -63,8 +95,8 @@ class ProjectController extends NotificationController
                 'course_id' => $course->id,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'from' => $validated['from'] ?? null,
-                'to' => $validated['to'] ?? null,
+                'start_date' => $validated['start_date'] ?? null,
+                'end_date' => $validated['end_date'] ?? null,
             ]);
             DB::commit();
 
@@ -81,8 +113,8 @@ class ProjectController extends NotificationController
                 'body' => [
                     'message' => 'A new project has been created for ' . $course->name . '.',
                     'title' => $project->title,
-                    'from' => $project->from,
-                    'to' => $project->to,
+                    'start_date' => $project->start_date,
+                    'end_date' => $project->end_date,
                 ],
             ];
 
@@ -146,8 +178,8 @@ class ProjectController extends NotificationController
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'from' => 'sometimes|nullable|date',
-            'to' => 'sometimes|nullable|date|after_or_equal:from',
+            'start_date' => 'sometimes|nullable|date',
+            'end_date' => 'sometimes|nullable|date|after_or_equal:start_date',
         ]);
 
         try {
@@ -203,5 +235,77 @@ class ProjectController extends NotificationController
                 'message' => 'Failed to delete project',
             ], 500);
         }
+    }
+
+    public function getEvaluatedProjects()
+    {
+        // get all evaluated projects created by the trainer,
+        // display course name, project title, project_strat_date, project_end_date, faild_student_count, passed_student_count, total_student_count
+        $trainer = Auth::user()->trainer;
+
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $evaluatedProjects = Project::whereHas('submissions', function ($q) {
+            $q->whereIn('status', ['passed', 'failed']);
+        })
+            ->where('created_by', $trainer->id)
+            ->with(['course', 'submissions'])
+            ->latest()
+            ->get();
+
+        if ($evaluatedProjects->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No evaluated projects found.',
+                'data' => [],
+            ], 200);
+        }
+
+        $formatted = $evaluatedProjects->map(function ($project) {
+            return [
+                'project_id' => $project->id,
+                'course_name' => $project->course->name ?? null,
+                'project_title' => $project->title,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'failed_student_count' => $project->submissions->where('status', 'failed')->count(),
+                'passed_student_count' => $project->submissions->where('status', 'passed')->count(),
+                'total_student_count' => $project->submissions->count(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Evaluated projects retrieved successfully.',
+            'data' => $formatted,
+        ], 200);
+    }
+
+    public function getProjectDetails(Project $project)
+    {
+        if (!Auth::user()->trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        if ($project->created_by !== Auth::user()->trainer->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. Trainer is not the creator of this project.',
+            ], 403);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Project details fetched successfully',
+            'data' => $project,
+        ], 200);
     }
 }
