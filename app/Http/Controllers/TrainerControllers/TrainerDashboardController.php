@@ -4,7 +4,10 @@ namespace App\Http\Controllers\TrainerControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Exam;
+use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class TrainerDashboardController extends Controller
@@ -168,6 +171,72 @@ class TrainerDashboardController extends Controller
                     ];
                 }),
             ],
+        ], 200);
+    }
+
+    public function getSchedule()
+    {
+       // get shedule of project and exam
+       $trainer = Auth::user()->trainer;
+       $projects = Project::where('created_by', $trainer->id)
+           ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addWeek()])
+           ->get();
+       $exams = Exam::where('created_by', $trainer->id)
+           ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addWeek()])
+           ->get();
+
+       $schedule = collect();
+
+       foreach ($projects as $p) {
+           $schedule->push([
+               'type' => 'project',
+               'id' => $p->id,
+               'title' => $p->title,
+               'start_date' => $p->start_date,
+               'end_date' => $p->end_date,
+           ]);
+       }
+
+       foreach ($exams as $e) {
+           $schedule->push([
+               'type' => 'exam',
+               'id' => $e->id,
+               'title' => $e->title,
+               'start_date' => $e->start_date,
+               'end_date' => $e->end_date,
+           ]);
+       }
+
+       return response()->json([
+           'status' => 'success',
+           'message' => 'Schedule retrieved successfully.',
+           'data' => $schedule,
+       ], 200);
+    }
+
+    public function getStudentProgress()
+    {
+        // student, course, progress, submitted_exam_count, submitted_project_count
+        // for each course
+        $trainer = Auth::user()->trainer;
+        $enrollments = $trainer->courses->flatMap->enrollments;
+
+        $students = $enrollments->map(function ($enrollment) {
+            return [
+                'student_id' => $enrollment->student->id,
+                'student_name' => $enrollment->student->user->full_name,
+                'course_id' => $enrollment->course->id,
+                'course_name' => $enrollment->course->name,
+                'progress' => $enrollment->progress,
+                'submitted_exam_count' => $enrollment->examSubmissions->count(),
+                'submitted_project_count' => $enrollment->projectSubmissions->count(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Student progress retrieved successfully.',
+            'data' => $students,
         ], 200);
     }
 }

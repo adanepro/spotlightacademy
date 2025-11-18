@@ -234,6 +234,8 @@ Route::group([
         Route::get('trainer/failed-students/exams', [EvaluationController::class, 'getFailedStudentOnExam']);
         Route::post('trainer/assign-remedial-exam', [EvaluationController::class, 'assignRemedialExam']);
 
+        Route::get('trainer/schedule', [TrainerDashboardController::class, 'getSchedule']);
+        Route::get('trainer/student-progress', [TrainerDashboardController::class, 'getStudentProgress']);
 
 
         /**

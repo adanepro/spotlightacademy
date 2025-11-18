@@ -391,6 +391,7 @@ class ExamController extends NotificationController
         $formatted = $submissions->map(function ($submission) {
             return [
                 'exam_title' => $submission->exam->title,
+                'exam_id' => $submission->exam->id,
                 'submission_id' => $submission->id,
                 'student_id' => $submission->enrollment->student->id,
                 'student_name' => $submission->enrollment->student->user->full_name,
