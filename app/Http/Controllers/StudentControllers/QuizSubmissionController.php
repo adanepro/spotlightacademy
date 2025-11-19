@@ -172,10 +172,21 @@ class QuizSubmissionController extends NotificationController
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
             })
-            ->with('module.course')
+            ->with('module.course', 'enrollmentQuiz')
             ->latest()
             ->get();
 
+        $quizzes = $quizzes->map(function ($quiz) {
+                return [
+                    'quiz_id' => $quiz->id,
+                    'course_id' => $quiz->module->course->id,
+                    'enrollment_quiz_id' => $quiz->enrollmentQuiz->id ?? null,
+                    'course_name' => $quiz->module->course->name,
+                    'module_id' => $quiz->module->id,
+                    'module_name' => $quiz->module->title,
+                    'questions' => $quiz->questions,
+                ];
+            });
 
         return response()->json([
             'status' => 'success',
