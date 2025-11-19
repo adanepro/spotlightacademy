@@ -36,7 +36,7 @@ class CourseQuize extends Model implements HasMedia
 
     public function enrollmentQuizzes()
     {
-        return $this->hasMany(EnrollmentQuiz::class);
+        return $this->hasMany(EnrollmentQuiz::class, 'quiz_id');
     }
 
     public function createdBy()
