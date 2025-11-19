@@ -78,7 +78,7 @@ class StudentDashboardController extends Controller
         // Auto sync enrollment if not exist
         app(EnrollmentSyncService::class)->sync($enrollment);
 
-        dd($enrollment);
+        //dd($enrollment);
 
         // Load course content and exam, project and quizzes should be those created by the trainer who belongs to the same institution as the student
         $course->load(
