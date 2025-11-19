@@ -158,6 +158,7 @@ class ExamController extends NotificationController
                 'body' => [
                     'message' => 'A new exam has been created for ' . $course->name . '.',
                     'title' => $exam->title,
+                    'for' => $exam->for === 'all' ? 'All students' : 'Failed students.',
                     'start_date' => $exam->start_date,
                     'end_date' => $exam->end_date,
                     'duration_minutes' => $exam->duration_minutes,

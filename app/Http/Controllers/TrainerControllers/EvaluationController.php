@@ -311,12 +311,12 @@ class EvaluationController extends NotificationController
         $filtered = $submissions->map(function ($submission) {
             return [
                 'submission_id' => $submission->id,
+                'enrollment_quiz_id' => $submission->enrollmentQuiz->id,
                 'student_id' => $submission->enrollment->student->id,
                 'student_name' => $submission->enrollment->student->user->full_name,
                 'course_id' => $submission->course->id,
                 'course_title' => $submission->course->name ?? null,
                 'quiz_id' => $submission->quiz->id,
-                'quiz_title' => $submission->quiz->title,
                 'questions' => $submission->quiz->questions,
                 'answers' => $submission->answers,
                 'status' => $submission->status,

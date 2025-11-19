@@ -4,6 +4,7 @@ namespace App\Http\Controllers\StudentControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Services\EnrollmentSyncService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,6 +72,12 @@ class StudentDashboardController extends Controller
         }
 
         $institutionId = $student->institution_id;
+
+        $enrollment = $student->enrollments()->where('course_id', $course->id)->first();
+
+        // Auto sync enrollment if not exist
+        app(EnrollmentSyncService::class)->sync($enrollment);
+
 
         // Load course content and exam, project and quizzes should be those created by the trainer who belongs to the same institution as the student
         $course->load(
