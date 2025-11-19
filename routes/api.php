@@ -186,6 +186,7 @@ Route::group([
          */
 
         Route::get('trainer/quizzes', [CourseQuizeController::class, 'allQuizzes']);
+        Route::get('trainer/courses/{course}/quizzes', [CourseQuizeController::class, 'getQuizzesByCourse']);
         Route::get('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'index']);
         Route::post('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'store']);
         Route::get('trainer/courses/{course}/modules/{module}/quizzes/{quiz}', [CourseQuizeController::class, 'show']);

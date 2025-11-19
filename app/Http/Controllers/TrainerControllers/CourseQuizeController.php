@@ -37,6 +37,33 @@ class CourseQuizeController extends Controller
         ], 200);
     }
 
+    public function getQuizzesByCourse(Course $course)
+    {
+        if (!Auth::user()->trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        if (!Auth::user()->trainer->courses->contains($course)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. Trainer is not assigned to this course.',
+            ], 403);
+        }
+
+        $quizes = CourseQuize::where('course_id', $course->id)
+            ->latest()
+            ->paginate(10);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Quizzes fetched successfully',
+            'data' => $quizes,
+        ], 200);
+    }
+
     public function allQuizzes()
     {
         if (!Auth::user()->trainer) {
