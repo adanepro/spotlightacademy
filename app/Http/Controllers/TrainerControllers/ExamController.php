@@ -105,9 +105,13 @@ class ExamController extends NotificationController
         }
 
         $validated = $request->validate([
+            'parent_id' => 'nullable|exists:exams,id',
             'title' => 'required|string|max:255',
             'for' => 'required|in:all,failed',
-            'questions' => 'required|array',
+            'questions.*.question' => 'required|string',
+            'questions.*.type' => 'required|in:mcq,short_answer',
+            'questions.*.options' => 'required_if:questions.*.type,mcq|array',
+            'questions.*.options.*' => 'required_if:questions.*.type,mcq|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
             'duration_minutes' => 'nullable|integer|min:1',
@@ -117,6 +121,7 @@ class ExamController extends NotificationController
             DB::beginTransaction();
             $exam = Exam::create([
                 'course_id' => $course->id,
+                'parent_id' => $request->parent_id ?? null,
                 'title' => $validated['title'],
                 'for' => $validated['for'],
                 'questions' => $validated['questions'],
@@ -126,14 +131,26 @@ class ExamController extends NotificationController
             ]);
             DB::commit();
             // notification
-            $users = User::whereHas('roles', function ($query) {
-                $query->where('name', 'Student');
-            })
-                ->whereHas('student', function ($query) use ($trainerInstitutionId) {
-                    $query->where('institution_id', $trainerInstitutionId);
-                })
-                ->get();
+            // if parent_id is provided and exam->for is failed, notify only students who have failed the previous exam
 
+            if ($request->parent_id && $exam->for === 'failed') {
+                $failedStudents = ExamSubmission::where('exam_id', $request->parent_id)
+                    ->where('status', 'failed')
+                    ->with('enrollment.student.user')
+                    ->get();
+
+                $users = $failedStudents->map(function ($failedStudent) {
+                    return $failedStudent->enrollment->student->user;
+                });
+            } else {
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'Student');
+                })
+                    ->whereHas('student', function ($query) use ($trainerInstitutionId) {
+                        $query->where('institution_id', $trainerInstitutionId);
+                    })
+                    ->get();
+            }
             $body = [
                 'title' => 'New Exam',
                 'body' => [
@@ -146,9 +163,6 @@ class ExamController extends NotificationController
             ];
 
             foreach ($users as $user) {
-                // if ($exam->for === 'failed' && $user->student->enrollments->where('course_id', $course->id)->first()->status !== 'failed') {
-                //     continue;
-                // }
                 $this->notify($body, $user);
             }
 

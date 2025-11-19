@@ -145,9 +145,10 @@ class CourseQuizeController extends Controller
         }
 
         $validated = $request->validate([
-            'questions' => 'required|array',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'questions.*.question' => 'required|string',
+            'questions.*.type' => 'required|in:mcq,short_answer',
+            'questions.*.options' => 'required_if:questions.*.type,mcq|array',
+            'questions.*.options.*' => 'required_if:questions.*.type,mcq|string',
         ]);
 
         try {
@@ -218,9 +219,10 @@ class CourseQuizeController extends Controller
         }
 
         $validated = $request->validate([
-            'questions' => 'sometimes|required|array',
-            'start_date' => 'sometimes|nullable|date',
-            'end_date' => 'sometimes|nullable|date|after:start_date',
+            'questions.*.question' => 'sometimes|required|string',
+            'questions.*.type' => 'sometimes|required|in:mcq,short_answer',
+            'questions.*.options' => 'sometimes|required_if:questions.*.type,mcq|array',
+            'questions.*.options.*' => 'sometimes|required_if:questions.*.type,mcq|string',
         ]);
 
         try {

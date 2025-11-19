@@ -28,6 +28,11 @@ return new class extends Migration
             $table->softDeletes();
             $table->timestamps();
         });
+
+        Schema::table('exams', function (Blueprint $table) {
+            $table->uuid('parent_id')->nullable()->after('id');
+            $table->foreign('parent_id')->references('id')->on('exams')->onDelete('cascade');
+        });
     }
 
     /**

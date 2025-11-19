@@ -17,15 +17,11 @@ class CourseQuize extends Model implements HasMedia
     protected $fillable = [
         'module_id',
         'questions',
-        'start_date',
-        'end_date',
         'created_by',
     ];
 
     protected $casts = [
         'questions' => 'array',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
     ];
 
     public function module()

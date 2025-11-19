@@ -23,6 +23,7 @@ class Exam extends Model
         'type',
         'created_by',
         'for',
+        'parent_id',
     ];
 
     protected $casts = [
@@ -30,6 +31,11 @@ class Exam extends Model
         'end_date' => 'datetime',
         'questions' => 'array',
     ];
+
+    public function parent()
+    {
+        return $this->belongsTo(Exam::class, 'parent_id');
+    }
 
     public function course()
     {
