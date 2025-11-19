@@ -55,9 +55,9 @@ class EnrollmentSyncService
             foreach ($module->quizzes as $quiz) {
                 $enrollment->quizzes()->updateOrCreate([
                     'quiz_id' => $quiz->id,
+                    'module_id' => $module->id,
                 ], [
                     'enrollment_id' => $enrollment->id,
-                    'module_id' => $module->id,
                     'status' => 'not_started',
                     'progress' => 0,
                 ]);
