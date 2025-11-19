@@ -34,6 +34,11 @@ class CourseQuize extends Model implements HasMedia
         return $this->hasMany(QuizSubmission::class);
     }
 
+    public function enrollmentQuizzes()
+    {
+        return $this->hasMany(EnrollmentQuiz::class);
+    }
+
     public function createdBy()
     {
         return $this->belongsTo(Trainer::class, 'created_by');
