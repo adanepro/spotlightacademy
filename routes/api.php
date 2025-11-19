@@ -229,7 +229,7 @@ Route::group([
         Route::post('trainer/assign-remedial-project', [EvaluationController::class, 'assignRemedialProject']);
 
         Route::get('trainer/quizzes/{quiz}/submissions', [EvaluationController::class, 'getQuizSubmissions']);
-        Route::post('trainer/quizzes/{quiz}/submissions/{quizSubmissionId}/evaluate', [EvaluationController::class, 'evaluateQuiz']);
+        Route::post('trainer/quizzes/submissions/{enrollmentQuiz}/evaluate', [EvaluationController::class, 'evaluateQuiz']);
         Route::get('trainer/failed-students/quizzes', [EvaluationController::class, 'getFailedStudentOnQuiz']);
         Route::post('trainer/assign-remedial-quiz', [EvaluationController::class, 'assignRemedialQuiz']);
 

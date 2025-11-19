@@ -369,9 +369,23 @@ class EvaluationController extends NotificationController
     /**
      * Evaluate a quiz submission
      */
-    public function evaluateQuiz(Request $request, $quizSubmissionId)
+    public function evaluateQuiz(Request $request, EnrollmentQuiz $enrollmentQuiz)
     {
-        $quizSubmission = QuizSubmission::findOrFail($quizSubmissionId);
+        $trainer = Auth::user()->trainer;
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        if (!$trainer->courses()->where('course_id', $enrollmentQuiz->quiz->course_id)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. Trainer is not assigned to this course.',
+            ], 403);
+        }
+
         $data = $request->validate([
             'status' => 'required|in:passed,failed,in_review',
             'review_comments' => 'nullable|string',
@@ -379,13 +393,13 @@ class EvaluationController extends NotificationController
 
         DB::beginTransaction();
         try {
-            $quizSubmission->update([
+            $submission = $enrollmentQuiz->submission;
+            $submission->update([
                 'status' => $data['status'],
                 'review_comments' => $data['review_comments'] ?? null,
             ]);
 
-            if ($quizSubmission->status === 'passed') {
-                $enrollmentQuiz = $quizSubmission->enrollmentQuiz;
+            if ($submission->status === 'passed') {
                 $enrollmentQuiz->update([
                     'status' => 'completed',
                     'progress' => 100,
@@ -393,8 +407,8 @@ class EvaluationController extends NotificationController
                 ]);
             }
 
-            $quizSubmission->enrollment->update([
-                'progress' => $quizSubmission->enrollment->calculateProgress(),
+            $submission->enrollment->update([
+                'progress' => $submission->enrollment->calculateProgress(),
             ]);
 
             DB::commit();
@@ -402,24 +416,23 @@ class EvaluationController extends NotificationController
             $user = User::whereHas('roles', function ($query) {
                 $query->where('name', 'Student');
             })
-                ->where('id', $quizSubmission->enrollment->student->user_id)
+                ->where('id', $submission->enrollment->student->user_id)
                 ->first();
-
-            $body = [
-                'title' => 'Quiz Evaluation',
-                'body' => [
-                    'message' => 'Your quiz submission has been evaluated.',
-                    'status' => $quizSubmission->status,
-                    'comments' => $quizSubmission->review_comments ?? null,
-                ],
-            ];
+                $body = [
+                    'title' => 'Quiz Evaluation',
+                    'body' => [
+                        'message' => 'Your quiz submission has been evaluated.',
+                        'status' => $submission->status,
+                        'comments' => $submission->review_comments ?? null,
+                    ],
+                ];
 
             $this->notify($body, $user);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Quiz evaluated successfully.',
-                'data' => $quizSubmission,
+                'data' => $submission,
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
