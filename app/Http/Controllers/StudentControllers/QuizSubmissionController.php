@@ -163,16 +163,19 @@ class QuizSubmissionController extends NotificationController
                 'message' => 'Student does not belong to any institution.',
             ], 400);
         }
-
+        // quizes inside enrolled courses created by trainers of the student's institution
         $courseIds = $student->enrollments()->pluck('course_id');
 
-        $quizzes = CourseQuize::whereIn('module.course_id', $courseIds)
+        $quizzes = CourseQuize::whereHas('module', function ($query) use ($courseIds) {
+            $query->whereIn('course_id', $courseIds);
+        })
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
             })
             ->with('module.course')
             ->latest()
             ->get();
+
 
         return response()->json([
             'status' => 'success',
