@@ -166,10 +166,11 @@ class QuizSubmissionController extends NotificationController
 
         $courseIds = $student->enrollments()->pluck('course_id');
 
-        $quizzes = CourseQuize::whereIn('course_id', $courseIds)
+        $quizzes = CourseQuize::whereIn('module.course_id', $courseIds)
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
             })
+            ->with('module.course')
             ->latest()
             ->get();
 
