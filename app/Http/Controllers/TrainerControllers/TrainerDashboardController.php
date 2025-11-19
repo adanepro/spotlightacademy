@@ -245,9 +245,9 @@ class TrainerDashboardController extends Controller
        ], 200);
     }
 
-    public function getStudentProgressPerCoursePerStudent()
+    public function getStudentProgress()
     {
-        // student, course, progress, submitted_exam_count, submitted_project_count
+        // student, course, progress, submitted_exam_count, submitted_project_count, submitted_quiz_count
         // for each course
         $trainer = Auth::user()->trainer;
         $enrollments = $trainer->courses->flatMap->enrollments;
@@ -261,6 +261,7 @@ class TrainerDashboardController extends Controller
                 'progress' => $enrollment->progress,
                 'submitted_exam_count' => $enrollment->examSubmissions->count(),
                 'submitted_project_count' => $enrollment->projectSubmissions->count(),
+                'submitted_quiz_count' => $enrollment->quizSubmissions->count(),
             ];
         });
 
@@ -272,9 +273,9 @@ class TrainerDashboardController extends Controller
     }
 
 
-    public function getTotalProgressPerStudent()
+    public function getTotalProgress()
     {
-       // get total progress of all students for all courses per student
+       // get total progress of all students for all courses per student per course
 
        $trainer = Auth::user()->trainer;
        $enrollments = $trainer->courses->flatMap->enrollments;
@@ -283,6 +284,8 @@ class TrainerDashboardController extends Controller
            return [
                'student_id' => $enrollment->student->id,
                'student_name' => $enrollment->student->user->full_name,
+               'course_id' => $enrollment->course->id,
+               'course_name' => $enrollment->course->name,
                'progress' => $enrollment->progress,
            ];
        });
