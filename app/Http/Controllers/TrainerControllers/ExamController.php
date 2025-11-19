@@ -44,8 +44,26 @@ class ExamController extends NotificationController
         }
         $exams = Auth::user()->trainer->exams;
 
+        if ($exams->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No exams found.',
+                'data' => [],
+            ], 200);
+        }
+
+        // if exam has submissions,and status is not in ['passed', 'failed'] then has_submissions is false
+        $exams = $exams->map(function ($exam) {
+            if ($exam->submissions->count() > 0 && !in_array($exam->submissions->first()->status, ['passed', 'failed'])) {
+                $exam->has_submissions = true;
+            } else {
+                $exam->has_submissions = false;
+            }
+            return $exam;
+        });
+
         $exams = Exam::where('created_by', Auth::user()->trainer->id)
-            ->with(['course'])
+            ->with(['course', 'submissions'])
             ->latest()
             ->get();
         $exams = $exams->map(function ($exam) {
@@ -57,6 +75,8 @@ class ExamController extends NotificationController
                 'start_date' => $exam->start_date,
                 'end_date' => $exam->end_date,
                 'status' => $exam->status,
+                'for' => $exam->for,
+                'has_submissions' => $exam->has_submissions,
             ];
         });
 
@@ -384,20 +404,20 @@ class ExamController extends NotificationController
         }
 
         $submissions = ExamSubmission::where('exam_id', $exam->id)
-            ->with(['enrollment.student', 'media'])
+            ->with(['enrollment.student', 'media', 'enrollmentExam'])
             ->latest()
             ->get();
 
         $formatted = $submissions->map(function ($submission) {
             return [
-                'exam_title' => $submission->exam->title,
                 'exam_id' => $submission->exam->id,
                 'submission_id' => $submission->id,
+                'enrollment_exam_id' => $submission->enrollmentExam->id,
                 'student_id' => $submission->enrollment->student->id,
                 'student_name' => $submission->enrollment->student->user->full_name,
                 'status' => $submission->status,
                 'progress' => $submission->enrollment->progress,
-                'review_comments' => $submission->review_commens,
+                'review_comments' => $submission->review_comments,
                 'submitted_at' => $submission->created_at->toDateTimeString(),
             ];
         });

@@ -41,7 +41,7 @@ class EvaluationController extends NotificationController
         }
 
         $submissions = ProjectSubmission::where('project_id', $project->id)
-            ->with(['enrollment.student', 'media'])
+            ->with(['enrollment.student', 'media', 'enrollmentProject'])
             ->latest()
             ->get();
 
@@ -152,7 +152,7 @@ class EvaluationController extends NotificationController
         }
 
         $submissions = ExamSubmission::where('exam_id', $exam->id)
-            ->with(['enrollment.student', 'media'])
+            ->with(['enrollment.student', 'media', 'enrollmentExam'])
             ->latest()
             ->get();
 
@@ -238,7 +238,99 @@ class EvaluationController extends NotificationController
                 'status' => 'error',
                 'message' => 'Evaluation failed: ' . $e->getMessage(),
             ], 500);
-        }           
+        }
+    }
+
+    /**
+     * Get all submissions of a quiz created by the trainer
+     * add filter by course and module
+     */
+    public function getQuizSubmissions(Request $request, CourseQuize $quiz)
+    {
+        $trainer = Auth::user()->trainer;
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        if ($quiz->created_by !== $trainer->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. Trainer is not the creator of this quiz.',
+            ], 403);
+        }
+
+        $courseId = $request->query('course_id');
+        $moduleId = $request->query('module_id');
+        if ($courseId) {
+            $submissions = QuizSubmission::where('quiz_id', $quiz->id)
+                ->whereHas('enrollment', function ($q) use ($courseId) {
+                    $q->where('course_id', $courseId);
+                })
+                ->with(['enrollment.student', 'media', 'enrollmentQuiz'])
+                ->latest()
+                ->get();
+        }
+
+        if ($moduleId) {
+            $submissions = QuizSubmission::where('quiz_id', $quiz->id)
+                ->whereHas('enrollment', function ($q) use ($moduleId) {
+                    $q->where('module_id', $moduleId);
+                })
+                ->with(['enrollment.student', 'media', 'enrollmentQuiz'])
+                ->latest()
+                ->get();
+        }
+        if ($courseId && $moduleId) {
+            $submissions = QuizSubmission::where('quiz_id', $quiz->id)
+                ->whereHas('enrollment', function ($q) use ($courseId, $moduleId) {
+                    $q->where('course_id', $courseId)->where('module_id', $moduleId);
+                })
+                ->with(['enrollment.student', 'media', 'enrollmentQuiz'])
+                ->latest()
+                ->get();
+        }
+
+        if (!$courseId && !$moduleId) {
+            $submissions = QuizSubmission::where('quiz_id', $quiz->id)
+                ->with(['enrollment.student', 'media', 'enrollmentQuiz'])
+                ->latest()
+                ->get();
+        }
+
+        if ($submissions->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No submissions found.',
+                'data' => [],
+            ], 200);
+        }
+
+        $filtered = $submissions->map(function ($submission) {
+            return [
+                'submission_id' => $submission->id,
+                'student_id' => $submission->enrollment->student->id,
+                'student_name' => $submission->enrollment->student->user->full_name,
+                'course_id' => $submission->course->id,
+                'course_title' => $submission->course->name ?? null,
+                'quiz_id' => $submission->quiz->id,
+                'quiz_title' => $submission->quiz->title,
+                'questions' => $submission->quiz->questions,
+                'answers' => $submission->answers,
+                'status' => $submission->status,
+                'review_comments' => $submission->review_comments,
+                'started_at' => $submission->enrollmentQuiz->started_at->toDateTimeString(),
+                'submitted_at' => $submission->created_at->toDateTimeString(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Quiz submissions fetched successfully.',
+            'data' => $filtered,
+        ], 200);
     }
 
     /**

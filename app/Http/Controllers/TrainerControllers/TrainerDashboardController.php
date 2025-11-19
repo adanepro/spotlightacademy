@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\Project;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -50,6 +49,38 @@ class TrainerDashboardController extends Controller
         ], 200);
     }
 
+    public function getAssessmentsOveriew()
+    {
+        if (!Auth::user()->trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $trainer = Auth::user()->trainer;
+        //pending projects for evaluation
+        $pendingProjects = Project::where('created_by', $trainer->id)
+            ->whereHas('submissions', function ($q) {
+                $q->where('status', 'submitted');
+            })
+            ->count();
+        //pending exams for evaluation
+        $pendingExams = Exam::where('created_by', $trainer->id)
+            ->whereHas('submissions', function ($q) {
+                $q->where('status', 'submitted');
+            })
+            ->count();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Assessments overview fetched successfully',
+            'data' => [
+                'pending_projects' => $pendingProjects,
+                'pending_exams' => $pendingExams,
+            ],
+        ], 200);
+    }
     public function getAssignedCourses()
     {
         if (!Auth::user()->trainer) {
@@ -214,7 +245,7 @@ class TrainerDashboardController extends Controller
        ], 200);
     }
 
-    public function getStudentProgress()
+    public function getStudentProgressPerCoursePerStudent()
     {
         // student, course, progress, submitted_exam_count, submitted_project_count
         // for each course
@@ -238,5 +269,30 @@ class TrainerDashboardController extends Controller
             'message' => 'Student progress retrieved successfully.',
             'data' => $students,
         ], 200);
+    }
+
+
+    public function getTotalProgressPerStudent()
+    {
+       // get total progress of all students for all courses per student
+
+       $trainer = Auth::user()->trainer;
+       $enrollments = $trainer->courses->flatMap->enrollments;
+
+       $students = $enrollments->map(function ($enrollment) {
+           return [
+               'student_id' => $enrollment->student->id,
+               'student_name' => $enrollment->student->user->full_name,
+               'progress' => $enrollment->progress,
+           ];
+       });
+
+       return response()->json([
+           'status' => 'success',
+           'message' => 'Total progress retrieved successfully.',
+           'data' => $students,
+       ], 200);
+
+
     }
 }

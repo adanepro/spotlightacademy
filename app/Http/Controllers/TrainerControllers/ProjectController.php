@@ -41,8 +41,27 @@ class ProjectController extends NotificationController
             ], 403);
         }
 
+        $projects = Auth::user()->trainer->projects;
+        if ($projects->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No projects found.',
+                'data' => [],
+            ], 200);
+        }
+
+        // if project has submissions,and status is not in ['passed', 'failed'] then has_submissions is false
+        $projects = $projects->map(function ($project) {
+            if ($project->submissions->count() > 0 && !in_array($project->submissions->first()->status, ['passed', 'failed'])) {
+                $project->has_submissions = true;
+            } else {
+                $project->has_submissions = false;
+            }
+            return $project;
+        });
+
         $projects = Project::where('created_by', Auth::user()->trainer->id)
-            ->with(['course'])
+            ->with(['course', 'submissions'])
             ->latest()
             ->get();
         $projects = $projects->map(function ($project) {
@@ -54,6 +73,7 @@ class ProjectController extends NotificationController
                 'start_date' => $project->start_date,
                 'end_date' => $project->end_date,
                 'status' => $project->status,
+                'has_submissions' => $project->has_submissions,
             ];
         });
 

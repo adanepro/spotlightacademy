@@ -178,11 +178,14 @@ Route::group([
         Route::get('trainer/status-overview', [TrainerDashboardController::class, 'getStatusOverview']);
         Route::get('trainer/assigned-courses', [TrainerDashboardController::class, 'getAssignedCourses']);
         Route::get('trainer/courses/{course}', [TrainerDashboardController::class, 'show']);
+        Route::get('trainer/assessments-overview', [TrainerDashboardController::class, 'getAssessmentsOveriew']);
 
 
         /**
          * Course Quiz Controller
          */
+
+        Route::get('trainer/quizzes', [CourseQuizeController::class, 'allQuizzes']);
         Route::get('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'index']);
         Route::post('trainer/courses/{course}/modules/{module}/quizzes', [CourseQuizeController::class, 'store']);
         Route::get('trainer/courses/{course}/modules/{module}/quizzes/{quiz}', [CourseQuizeController::class, 'show']);

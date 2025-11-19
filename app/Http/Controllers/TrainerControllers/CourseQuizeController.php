@@ -37,6 +37,58 @@ class CourseQuizeController extends Controller
         ], 200);
     }
 
+    public function allQuizzes()
+    {
+        if (!Auth::user()->trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $quizes = Auth::user()->trainer->quizzes;
+
+        if ($quizes->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No quizzes found.',
+                'data' => [],
+            ], 200);
+        }
+
+        // if quiz has submissions,and status is not in ['passed', 'failed'] then has_submissions is false
+        $quizes = $quizes->map(function ($quiz) {
+            if ($quiz->submissions->count() > 0 && !in_array($quiz->submissions->first()->status, ['passed', 'failed'])) {
+                $quiz->has_submissions = true;
+            } else {
+                $quiz->has_submissions = false;
+            }
+            return $quiz;
+        });
+
+        $quizes = CourseQuize::where('created_by', Auth::user()->trainer->id)
+            ->with(['module.course', 'submissions'])
+            ->latest()
+            ->get();
+        $quizes = $quizes->map(function ($quiz) {
+            return [
+                'quiz_id' => $quiz->id,
+                'course_id' => $quiz->module->course->id,
+                'course_name' => $quiz->module->course->name,
+                'module_id' => $quiz->module->id,
+                'module_name' => $quiz->module->title,
+                'title' => $quiz->title,
+                'has_submissions' => $quiz->has_submissions,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Quizzes fetched successfully',
+            'data' => $quizes,
+        ], 200);
+    }
+
 
     public function store(Request $request, Course $course, Module $module)
     {
@@ -191,5 +243,51 @@ class CourseQuizeController extends Controller
                 'message' => 'Failed to delete quiz: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function getEvaluatedQuizzes()
+    {
+        // get all evaluated quizzes created by the trainer,
+        // display course name, quiz title, quiz_strat_date, quiz_end_date, faild_student_count, passed_student_count, total_student_count
+        $trainer = Auth::user()->trainer;
+        if (!$trainer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized access. User is not a trainer.',
+            ], 403);
+        }
+
+        $evaluatedQuizzes = CourseQuize::whereHas('submissions', function ($q) {
+            $q->whereIn('status', ['passed', 'failed']);
+        })
+            ->where('created_by', $trainer->id)
+            ->with(['module.course', 'submissions'])
+            ->latest()
+            ->get();
+
+        if ($evaluatedQuizzes->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No evaluated quizzes found.',
+                'data' => [],
+            ], 200);
+        }
+
+        $formatted = $evaluatedQuizzes->map(function ($quiz) {
+            return [
+                'quiz_id' => $quiz->id,
+                'course_name' => $quiz->module->course->name ?? null,
+                'quiz_title' => $quiz->title,
+                'failed_student_count' => $quiz->submissions->where('status', 'failed')->count(),
+                'passed_student_count' => $quiz->submissions->where('status', 'passed')->count(),
+                'total_student_count' => $quiz->submissions->count(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Evaluated quizzes retrieved successfully.',
+            'data' => $formatted,
+        ], 200);
     }
 }
