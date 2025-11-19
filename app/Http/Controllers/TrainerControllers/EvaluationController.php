@@ -379,12 +379,12 @@ class EvaluationController extends NotificationController
             ], 403);
         }
 
-        if (!$trainer->courses()->where('course_id', $enrollmentQuiz->quiz->course_id)->exists()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized access. Trainer is not assigned to this course.',
-            ], 403);
-        }
+        // if (!$trainer->courses()->where('course_id', $enrollmentQuiz->quiz->course_id)->exists()) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Unauthorized access. Trainer is not assigned to this course.',
+        //     ], 403);
+        // }
 
         $data = $request->validate([
             'status' => 'required|in:passed,failed,in_review',
