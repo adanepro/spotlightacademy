@@ -44,6 +44,22 @@ class EvaluationController extends NotificationController
             ->with(['enrollment.student', 'media', 'enrollmentProject'])
             ->latest()
             ->get();
+        $submissions = $submissions->map(function ($submission) {
+            return [
+                'project_id' => $submission->project->id,
+                'project_title' => $submission->project->title,
+                'submission_id' => $submission->id,
+                'enrollment_project_id' => $submission->enrollmentProject->id,
+                'course_id' => $submission->course->id,
+                'course_name' => $submission->course->name ?? null,
+                'student_id' => $submission->enrollment->student->id,
+                'student_name' => $submission->enrollment->student->user->full_name,
+                'media' => $submission->media,
+                'status' => $submission->status,
+                'review_comments' => $submission->review_comments,
+                'submitted_at' => $submission->created_at->toDateTimeString(),
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
@@ -155,6 +171,23 @@ class EvaluationController extends NotificationController
             ->with(['enrollment.student', 'media', 'enrollmentExam'])
             ->latest()
             ->get();
+        $submissions = $submissions->map(function ($submission) {
+            return [
+                'exam_id' => $submission->exam->id,
+                'exam_title' => $submission->exam->title,
+                'submission_id' => $submission->id,
+                'enrollment_exam_id' => $submission->enrollmentExam->id,
+                'course_id' => $submission->course->id,
+                'course_name' => $submission->course->name ?? null,
+                'student_id' => $submission->enrollment->student->id,
+                'student_name' => $submission->enrollment->student->user->full_name,
+                'questions' => $submission->exam->questions,
+                'answers' => $submission->answers,
+                'status' => $submission->status,
+                'review_comments' => $submission->review_comments,
+                'submitted_at' => $submission->created_at->toDateTimeString(),
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
@@ -336,7 +369,7 @@ class EvaluationController extends NotificationController
     /**
      * Evaluate a quiz submission
      */
-    public function evaluateQuiz(Request $request, QuizSubmission $submission)
+    public function evaluateQuiz(Request $request, QuizSubmission $quizSubmission)
     {
         $data = $request->validate([
             'status' => 'required|in:passed,failed,in_review',
@@ -345,13 +378,13 @@ class EvaluationController extends NotificationController
 
         DB::beginTransaction();
         try {
-            $submission->update([
+            $quizSubmission->update([
                 'status' => $data['status'],
                 'review_comments' => $data['review_comments'] ?? null,
             ]);
 
-            if ($submission->status === 'passed') {
-                $enrollmentQuiz = $submission->enrollmentQuiz;
+            if ($quizSubmission->status === 'passed') {
+                $enrollmentQuiz = $quizSubmission->enrollmentQuiz;
                 $enrollmentQuiz->update([
                     'status' => 'completed',
                     'progress' => 100,
@@ -359,8 +392,8 @@ class EvaluationController extends NotificationController
                 ]);
             }
 
-            $submission->enrollment->update([
-                'progress' => $submission->enrollment->calculateProgress(),
+            $quizSubmission->enrollment->update([
+                'progress' => $quizSubmission->enrollment->calculateProgress(),
             ]);
 
             DB::commit();
@@ -368,15 +401,15 @@ class EvaluationController extends NotificationController
             $user = User::whereHas('roles', function ($query) {
                 $query->where('name', 'Student');
             })
-                ->where('id', $submission->enrollment->student->user_id)
+                ->where('id', $quizSubmission->enrollment->student->user_id)
                 ->first();
 
             $body = [
                 'title' => 'Quiz Evaluation',
                 'body' => [
                     'message' => 'Your quiz submission has been evaluated.',
-                    'status' => $submission->status,
-                    'comments' => $submission->review_comments ?? null,
+                    'status' => $quizSubmission->status,
+                    'comments' => $quizSubmission->review_comments ?? null,
                 ],
             ];
 
@@ -385,7 +418,7 @@ class EvaluationController extends NotificationController
             return response()->json([
                 'status' => 'success',
                 'message' => 'Quiz evaluated successfully.',
-                'data' => $submission,
+                'data' => $quizSubmission,
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
