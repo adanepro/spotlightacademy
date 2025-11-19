@@ -21,6 +21,8 @@ class EnrollmentSyncService
             $enrollment->modules()->updateOrCreate([
                 'module_id' => $module->id,
             ], [
+                'enrollment_id' => $enrollment->id,
+                'module_id' => $module->id,
                 'status' => 'not_started',
                 'progress' => 0,
             ]);
@@ -30,6 +32,8 @@ class EnrollmentSyncService
                 $enrollment->modules()->where('module_id', $module->id)->first()->lectures()->updateOrCreate([
                     'lecture_id' => $lecture->id,
                 ], [
+                    'enrollment_module_id' => $enrollment->modules()->where('module_id', $module->id)->first()->id,
+                    'module_id' => $module->id,
                     'status' => 'not_started',
                     'is_watched' => false,
                     'progress' => 0,
@@ -40,6 +44,7 @@ class EnrollmentSyncService
                     $enrollment->modules()->where('module_id', $module->id)->first()->lectures()->where('lecture_id', $lecture->id)->first()->materials()->updateOrCreate([
                         'lecture_material_id' => $material->id,
                     ], [
+                        'enrollment_lecture_id' => $enrollment->modules()->where('module_id', $module->id)->first()->lectures()->where('lecture_id', $lecture->id)->first()->id,
                         'is_viewed' => false,
                         'is_downloaded' => false,
                     ]);
@@ -51,6 +56,8 @@ class EnrollmentSyncService
                 $enrollment->quizzes()->updateOrCreate([
                     'quiz_id' => $quiz->id,
                 ], [
+                    'enrollment_id' => $enrollment->id,
+                    'module_id' => $module->id,
                     'status' => 'not_started',
                     'progress' => 0,
                 ]);
@@ -62,6 +69,8 @@ class EnrollmentSyncService
             $enrollment->projects()->updateOrCreate([
                 'project_id' => $project->id,
             ], [
+                'enrollment_id' => $enrollment->id,
+                'project_id' => $project->id,
                 'status' => 'not_started',
                 'progress' => 0,
             ]);
@@ -72,9 +81,11 @@ class EnrollmentSyncService
             $enrollment->exams()->updateOrCreate([
                 'exam_id' => $exam->id,
             ], [
+                'enrollment_id' => $enrollment->id,
+                'exam_id' => $exam->id,
                 'status' => 'not_started',
                 'progress' => 0,
-                
+
             ]);
         }
     }
