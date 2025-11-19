@@ -172,7 +172,7 @@ class QuizSubmissionController extends NotificationController
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
             })
-            ->with('module.course', 'enrollmentQuiz')
+            ->with('module.course', 'enrollmentQuizzes')
             ->latest()
             ->get();
 
