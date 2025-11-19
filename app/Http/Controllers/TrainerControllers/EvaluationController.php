@@ -369,8 +369,9 @@ class EvaluationController extends NotificationController
     /**
      * Evaluate a quiz submission
      */
-    public function evaluateQuiz(Request $request, QuizSubmission $quizSubmission)
+    public function evaluateQuiz(Request $request, $quizSubmissionId)
     {
+        $quizSubmission = QuizSubmission::findOrFail($quizSubmissionId);
         $data = $request->validate([
             'status' => 'required|in:passed,failed,in_review',
             'review_comments' => 'nullable|string',
