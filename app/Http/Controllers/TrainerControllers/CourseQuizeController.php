@@ -145,10 +145,12 @@ class CourseQuizeController extends Controller
         }
 
         $validated = $request->validate([
-            'questions.*.question' => 'required|string',
+            'questions' => 'required|array|min:1',
+            'questions.*.question' => 'required|string|max:1000',
             'questions.*.type' => 'required|in:mcq,short_answer',
-            'questions.*.options' => 'required_if:questions.*.type,mcq|array',
-            'questions.*.options.*' => 'required_if:questions.*.type,mcq|string',
+            'questions.*.options' => 'required_if:questions.*.type,mcq|array|min:2',
+            'questions.*.options.*.key' => 'required_if:questions.*.type,mcq|string|max:5',
+            'questions.*.options.*.option' => 'required_if:questions.*.type,mcq|string|max:500',
         ]);
 
         try {
