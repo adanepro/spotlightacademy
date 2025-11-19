@@ -53,7 +53,9 @@ class CourseQuizeController extends Controller
             ], 403);
         }
 
-        $quizes = CourseQuize::where('course_id', $course->id)
+        $quizes = CourseQuize::whereHas('module', function ($q) use ($course) {
+            $q->where('course_id', $course->id);
+        })
             ->latest()
             ->paginate(10);
 
