@@ -47,7 +47,7 @@ class ProjectSubmissionController extends NotificationController
 
 
         $data = $request->validate([
-            'project_file' => 'required|file|mimes:pdf,doc,docx,zip|max:20480', // max 20MB
+            'project_file' => 'nullable|file|mimes:pdf,doc,docx,zip|max:20480', // max 20MB
             'link' => 'nullable|url',
         ]);
 
