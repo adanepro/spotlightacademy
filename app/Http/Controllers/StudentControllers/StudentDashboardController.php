@@ -138,6 +138,7 @@ class StudentDashboardController extends Controller
                             'status' => $enrollmentLecture?->status ?? 'not_started',
                             'is_watched' => $enrollmentLecture?->is_watched ?? false,
                             'progress' => $enrollmentLecture?->progress ?? 0,
+                            'lecture_video' => $lecture->lecture_video ?? null,
                             'materials' => $lecture->materials->map(function ($material) use ($enrollmentLecture) {
                                 $enrollmentMaterial = $enrollmentLecture?->materials()->where('lecture_material_id', $material->id)->first();
 
@@ -148,6 +149,7 @@ class StudentDashboardController extends Controller
                                     'enrollment_material_id' => $enrollmentMaterial?->id,
                                     'is_viewed' => $enrollmentMaterial?->is_viewed ?? false,
                                     'is_downloaded' => $enrollmentMaterial?->is_downloaded ?? false,
+                                    'lecture_note' => $material->lecture_notes ?? null,
                                 ];
                             }),
                         ];
@@ -173,6 +175,7 @@ class StudentDashboardController extends Controller
                     'project_title' => $project->title ?? null,
                     'enrollment_project_id' => $enrollmentProject?->id,
                     'status' => $enrollmentProject?->status ?? 'not_started',
+                    'project_description' => $project->description ?? null,
                     'submission_link' => $enrollmentProject?->link,
                     'created_by' => $project->createdBy?->user->full_name ?? null,
                 ];
@@ -187,6 +190,7 @@ class StudentDashboardController extends Controller
                     'status' => $enrollmentExam?->status ?? 'not_started',
                     'score' => $enrollmentExam?->score ?? null,
                     'created_by' => $exam->createdBy?->user->full_name ?? null,
+                    'questions' => $exam->questions ?? null,
                 ];
             }),
         ];
