@@ -29,21 +29,21 @@ class ProjectSubmissionController extends NotificationController
             ], 400);
         }
 
-        $now = now();
+        // $now = now();
 
-        if ($now->lt($project->start_date)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Project submission is not yet open.',
-            ], 400);
-        }
+        // if ($now->lt($project->start_date)) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Project submission is not yet open.',
+        //     ], 400);
+        // }
 
-        if ($now->gt($project->end_date)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Project submission deadline has passed.',
-            ], 400);
-        }
+        // if ($now->gt($project->end_date)) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Project submission deadline has passed.',
+        //     ], 400);
+        // }
 
 
         $data = $request->validate([
