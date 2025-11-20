@@ -87,12 +87,14 @@ class StudentDashboardController extends Controller
                 'projects' => function ($query) use ($institutionId) {
                     $query->whereHas('createdBy', function ($query) use ($institutionId) {
                         $query->where('institution_id', $institutionId);
-                    })->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
+                    });
+                    // ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
                 },
                 'exams' => function ($query) use ($institutionId) {
                     $query->whereHas('createdBy', function ($query) use ($institutionId) {
                         $query->where('institution_id', $institutionId);
-                    })->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
+                    });
+                    // ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
                 },
                 'modules.quizzes' => function ($query) use ($institutionId) {
                     $query->whereHas('createdBy', function ($query) use ($institutionId) {
