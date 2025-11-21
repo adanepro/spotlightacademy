@@ -4,6 +4,11 @@ namespace App\Http\Controllers\StudentControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Exam;
+use App\Models\ExamSubmission;
+use App\Models\Project;
+use App\Models\ProjectSubmission;
+use App\Models\QuizSubmission;
 use App\Models\User;
 use App\Services\EnrollmentSyncService;
 use Carbon\Carbon;
@@ -231,36 +236,89 @@ class StudentDashboardController extends Controller
     public function getOverview()
     {
         $student = Auth::user()->student;
-        $enrollments = $student->enrollments;
-        $upcomingProjects = $enrollments->flatMap->projects()->where('status', 'upcoming')->count();
-        $submittedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'submitted')->count();
-        $failedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'failed')->count();
-        $passedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'passed')->count();
+
+        if (! $student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only students can access this.',
+            ], 403);
+        }
+
+        $enrollmentIds = $student->enrollments()->pluck('id');
+
+        // PROJECTS
+        $upcomingProjects = Project::whereHas('enrollmentProjects', function ($q) use ($enrollmentIds) {
+            $q->whereIn('enrollment_id', $enrollmentIds);
+        })
+            ->where('start_date', '>', now())
+            ->count();
+
+        $submittedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'submitted')
+            ->count();
+
+        $failedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'failed')
+            ->count();
+
+        $passedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'passed')
+            ->count();
+
         $evaluatedProjects = $failedProjects + $passedProjects;
-        $upcomingExams = $enrollments->flatMap->exams()->where('status', 'upcoming')->count();
-        $submittedExams = $enrollments->flatMap->examSubmissions()->where('status', 'submitted')->count();
-        $failedExams = $enrollments->flatMap->examSubmissions()->where('status', 'failed')->count();
-        $passedExams = $enrollments->flatMap->examSubmissions()->where('status', 'passed')->count();
+
+        // EXAMS
+        $upcomingExams = Exam::whereHas('enrollmentExams', function ($q) use ($enrollmentIds) {
+            $q->whereIn('enrollment_id', $enrollmentIds);
+        })
+            ->where('start_date', '>', now())
+            ->count();
+
+        $submittedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'submitted')
+            ->count();
+
+        $failedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'failed')
+            ->count();
+
+        $passedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'passed')
+            ->count();
+
         $evaluatedExams = $failedExams + $passedExams;
-        $submittedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'submitted')->count();
-        $failedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'failed')->count();
-        $passedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'passed')->count();
+
+        // QUIZZES
+        $submittedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'submitted')
+            ->count();
+
+        $failedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'failed')
+            ->count();
+
+        $passedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
+            ->where('status', 'passed')
+            ->count();
+
         $evaluatedQuizzes = $failedQuizzes + $passedQuizzes;
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Student overview fetched successfully',
+            'message' => 'Student overview fetched successfully.',
             'data' => [
                 'upcoming_projects' => $upcomingProjects,
                 'submitted_projects' => $submittedProjects,
                 'failed_projects' => $failedProjects,
                 'passed_projects' => $passedProjects,
                 'evaluated_projects' => $evaluatedProjects,
+
                 'upcoming_exams' => $upcomingExams,
                 'submitted_exams' => $submittedExams,
                 'failed_exams' => $failedExams,
                 'passed_exams' => $passedExams,
                 'evaluated_exams' => $evaluatedExams,
+
                 'submitted_quizzes' => $submittedQuizzes,
                 'failed_quizzes' => $failedQuizzes,
                 'passed_quizzes' => $passedQuizzes,
