@@ -227,4 +227,45 @@ class StudentDashboardController extends Controller
             ],
         ], 200);
     }
+
+    public function getOverview()
+    {
+        $student = Auth::user()->student;
+        $enrollments = $student->enrollments;
+        $upcomingProjects = $enrollments->flatMap->projects()->where('status', 'upcoming')->count();
+        $submittedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'submitted')->count();
+        $failedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'failed')->count();
+        $passedProjects = $enrollments->flatMap->projectSubmissions()->where('status', 'passed')->count();
+        $evaluatedProjects = $failedProjects + $passedProjects;
+        $upcomingExams = $enrollments->flatMap->exams()->where('status', 'upcoming')->count();
+        $submittedExams = $enrollments->flatMap->examSubmissions()->where('status', 'submitted')->count();
+        $failedExams = $enrollments->flatMap->examSubmissions()->where('status', 'failed')->count();
+        $passedExams = $enrollments->flatMap->examSubmissions()->where('status', 'passed')->count();
+        $evaluatedExams = $failedExams + $passedExams;
+        $submittedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'submitted')->count();
+        $failedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'failed')->count();
+        $passedQuizzes = $enrollments->flatMap->quizSubmissions()->where('status', 'passed')->count();
+        $evaluatedQuizzes = $failedQuizzes + $passedQuizzes;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Student overview fetched successfully',
+            'data' => [
+                'upcoming_projects' => $upcomingProjects,
+                'submitted_projects' => $submittedProjects,
+                'failed_projects' => $failedProjects,
+                'passed_projects' => $passedProjects,
+                'evaluated_projects' => $evaluatedProjects,
+                'upcoming_exams' => $upcomingExams,
+                'submitted_exams' => $submittedExams,
+                'failed_exams' => $failedExams,
+                'passed_exams' => $passedExams,
+                'evaluated_exams' => $evaluatedExams,
+                'submitted_quizzes' => $submittedQuizzes,
+                'failed_quizzes' => $failedQuizzes,
+                'passed_quizzes' => $passedQuizzes,
+                'evaluated_quizzes' => $evaluatedQuizzes,
+            ],
+        ], 200);
+    }
 }

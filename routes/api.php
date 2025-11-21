@@ -253,6 +253,7 @@ Route::group([
         Route::get('student/courses', [StudentDashboardController::class, 'courseIndex']);
         Route::get('students/courses/{course}/details', [StudentDashboardController::class, 'courseShow']);
         Route::get('students/dashboard/progress-average', [StudentDashboardController::class, 'getCourseProgressAverage']);
+        Route::get('students/dashboard/overview', [StudentDashboardController::class, 'getOverview']);
 
         /**
          * Enrollment Controller
