@@ -173,16 +173,16 @@ class ExamSubmissionController extends NotificationController
         $query = Exam::whereIn('course_id', $courseIds)
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
-            })
-            ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
+            });
+            // ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
 
-        if (in_array($status, ['upcoming', 'ongoing', 'closed'])) {
-            $query->where('status', $status);
+        // if (in_array($status, ['upcoming', 'ongoing', 'closed'])) {
+        //     $query->where('status', $status);
 
-            if ($status === 'upcoming') {
-                $query->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
-            }
-        }
+        //     if ($status === 'upcoming') {
+        //         $query->whereBetween('start_date', [Carbon::now(), Carbon::now()->addMinute()]);
+        //     }
+        // }
 
         $exams = $query->latest()->get();
 
