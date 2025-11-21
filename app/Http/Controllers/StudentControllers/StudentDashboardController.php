@@ -4,6 +4,7 @@ namespace App\Http\Controllers\StudentControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\User;
 use App\Services\EnrollmentSyncService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -211,6 +212,9 @@ class StudentDashboardController extends Controller
         $totalCourses = $enrollments->count();
         $totalProgress = $enrollments->sum('progress');
         $averageProgress = $totalCourses > 0 ? $totalProgress / $totalCourses : 0;
+        $averageProgress = round($averageProgress, 2);
+        // unread notifications count
+        $unreadNotifications = User::find(Auth::id())->unreadNotifications->count();
 
         return response()->json([
             'status' => 'success',
@@ -219,6 +223,7 @@ class StudentDashboardController extends Controller
                 'total_courses' => $totalCourses,
                 'total_progress' => $totalProgress,
                 'average_progress' => $averageProgress,
+                'unread_notifications' => $unreadNotifications,
             ],
         ], 200);
     }
