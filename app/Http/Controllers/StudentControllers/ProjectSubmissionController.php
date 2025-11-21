@@ -225,8 +225,7 @@ class ProjectSubmissionController extends NotificationController
         $query = Project::whereIn('course_id', $courseIds)
             ->whereHas('createdBy', function ($query) use ($institutionId) {
                 $query->where('institution_id', $institutionId);
-            })
-            ->whereBetween('start_date', [Carbon::now(), Carbon::now()->addWeek()]);
+            })->whereBetween('start_date', [Carbon::now(), Carbon::now()->addWeek()]);
 
         if (in_array($status, ['upcoming', 'ongoing', 'closed'])) {
             $query->where('status', $status);
@@ -245,6 +244,8 @@ class ProjectSubmissionController extends NotificationController
             return [
                 'project_id'   => $project->id,
                 'project_enrollment_id' => $enrollmentProject?->id ?? null,
+                'course_id'    => $project->course->id,
+                'course_name'  => $project->course->name,
                 'title'        => $project->title,
                 'description'  => $project->description,
                 'start_date'   => $project->start_date,
@@ -260,6 +261,54 @@ class ProjectSubmissionController extends NotificationController
             'message' => 'Projects retrieved successfully.',
             'filter'  => $status ?? 'all',
             'data'    => $formattedProjects,
+        ], 200);
+    }
+
+    public function getUpcomingProjects()
+    {
+        $student = Auth::user()->student;
+
+        if (!$student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized: Only students can access this resource.',
+            ], 403);
+        }
+
+        $upcomingProjects = Project::whereHas('enrollments', function ($q) use ($student) {
+            $q->where('student_id', $student->id);
+        })
+            ->where('start_date', '>=', now())
+            ->with(['course'])
+            ->latest()
+            ->get();
+
+        if ($upcomingProjects->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No upcoming projects found.',
+                'data' => [],
+            ], 200);
+        }
+
+        $formatted = $upcomingProjects->map(function ($project) {
+            return [
+                'project_id'   => $project->id,
+                'project_enrollment_id' => $project->enrollmentProjects()->first()->id ?? null,
+                'project_status' => $project->enrollmentProjects()->first()->status ?? 'not_started',
+                'course_id'    => $project->course->id,
+                'course_name'  => $project->course->name,
+                'title'        => $project->title,
+                'description'  => $project->description,
+                'start_date'   => $project->start_date,
+                'end_date'     => $project->end_date,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Upcoming projects retrieved successfully.',
+            'data' => $formatted,
         ], 200);
     }
 

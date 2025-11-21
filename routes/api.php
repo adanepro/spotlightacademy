@@ -270,6 +270,7 @@ Route::group([
          */
         Route::get('student/project-submissions', [ProjectSubmissionController::class, 'index']);
         Route::get('student/projects', [ProjectSubmissionController::class, 'allProjects']);
+        Route::get('student/upcoming-projects', [ProjectSubmissionController::class, 'getUpcomingProjects']);
         Route::get('student/projects/evaluated', [ProjectSubmissionController::class, 'getEvaluatedProjects']);
         Route::post('student/enrollment-projects/{enrollmentProject}/submit', [ProjectSubmissionController::class, 'submit']);
         Route::get('student/enrollment-projects/{enrollmentProject}/submission', [ProjectSubmissionController::class, 'show']);
