@@ -4,7 +4,9 @@ namespace App\Http\Controllers\StudentControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\EnrollmentExam;
 use App\Models\EnrollmentProject;
+use App\Models\EnrollmentQuiz;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Project;
@@ -286,6 +288,85 @@ class StudentDashboardController extends Controller
         // ============================
         $evaluatedProjects = $passedProjects + $failedProjects;
 
+        // 1. Get all enrollment_exams of the student
+        $enrollmentExams = EnrollmentExam::whereHas('enrollment', function ($q) use ($student) {
+            $q->where('student_id', $student->id);
+        })->pluck('id');
+
+        // 2. Get all exam_ids assigned to this student
+        $examIds = EnrollmentExam::whereIn('id', $enrollmentExams)
+            ->pluck('exam_id');
+
+        // ============================
+        // Upcoming Exams
+        // ============================
+        $upcomingExams = Exam::whereIn('id', $examIds)
+            ->where('status', 'upcoming')
+            ->count();
+
+
+        // ============================
+        // Submitted Exams
+        // ============================
+        $submittedExams = ExamSubmission::whereIn('enrollment_exam_id', $enrollmentExams)
+            ->where('status', 'submitted')
+            ->count();
+
+        // ============================
+        // Failed Exams
+        // ============================
+        $failedExams = ExamSubmission::whereIn('enrollment_exam_id', $enrollmentExams)
+            ->where('status', 'failed')
+            ->count();
+
+        // ============================
+        // Passed Exams
+        // ============================
+        $passedExams = ExamSubmission::whereIn('enrollment_exam_id', $enrollmentExams)
+            ->where('status', 'passed')
+            ->count();
+
+        // ============================
+        // Evaluated Exams = passed + failed
+        // ============================
+        $evaluatedExams = $passedExams + $failedExams;
+
+        // 1. Get all enrollment_quizzes of the student
+        $enrollmentQuizzes = EnrollmentQuiz::whereHas('enrollment', function ($q) use ($student) {
+            $q->where('student_id', $student->id);
+        })->pluck('id');
+
+
+        // 2. Get all quiz_ids assigned to this student
+        $quizIds = EnrollmentQuiz::whereIn('id', $enrollmentQuizzes)
+            ->pluck('quiz_id');
+
+        // ============================
+        // Submitted Quizzes
+        // ============================
+        $submittedQuizzes = QuizSubmission::whereIn('enrollment_quiz_id', $enrollmentQuizzes)
+            ->where('status', 'submitted')
+            ->count();
+
+        // ============================
+        // Failed Quizzes
+        // ============================
+        $failedQuizzes = QuizSubmission::whereIn('enrollment_quiz_id', $enrollmentQuizzes)
+            ->where('status', 'failed')
+            ->count();
+
+        // ============================
+        // Passed Quizzes
+        // ============================
+        $passedQuizzes = QuizSubmission::whereIn('enrollment_quiz_id', $enrollmentQuizzes)
+            ->where('status', 'passed')
+            ->count();
+
+        // ============================
+        // Evaluated Quizzes = passed + failed
+        // ============================
+        $evaluatedQuizzes = $passedQuizzes + $failedQuizzes;
+
         return response()->json([
             'status' => 'success',
             'message' => 'Student overview fetched successfully.',
@@ -296,16 +377,16 @@ class StudentDashboardController extends Controller
                 'passed_projects' => $passedProjects,
                 'evaluated_projects' => $evaluatedProjects,
 
-                // 'upcoming_exams' => $upcomingExams,
-                // 'submitted_exams' => $submittedExams,
-                // 'failed_exams' => $failedExams,
-                // 'passed_exams' => $passedExams,
-                // 'evaluated_exams' => $evaluatedExams,
+                'upcoming_exams' => $upcomingExams,
+                'submitted_exams' => $submittedExams,
+                'failed_exams' => $failedExams,
+                'passed_exams' => $passedExams,
+                'evaluated_exams' => $evaluatedExams,
 
-                // 'submitted_quizzes' => $submittedQuizzes,
-                // 'failed_quizzes' => $failedQuizzes,
-                // 'passed_quizzes' => $passedQuizzes,
-                // 'evaluated_quizzes' => $evaluatedQuizzes,
+                'submitted_quizzes' => $submittedQuizzes,
+                'failed_quizzes' => $failedQuizzes,
+                'passed_quizzes' => $passedQuizzes,
+                'evaluated_quizzes' => $evaluatedQuizzes,
             ],
         ], 200);
     }
