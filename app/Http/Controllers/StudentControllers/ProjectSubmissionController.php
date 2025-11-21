@@ -195,7 +195,7 @@ class ProjectSubmissionController extends NotificationController
                 'course_name'          => $submission->course->name,
                 'project_enrollment_id' => $submission->enrollmentProject->id,
                 'status'               => $submission->status,
-                'submission_status'    => $submissionStatus, // ⭐ Added
+                'submission_status'    => $submissionStatus, 
                 'review_comments'      => $submission->review_comments,
                 'submitted_at'         => $submittedAt->toDateTimeString(),
                 'file'                 => $submission->getFirstMediaUrl('project_file') ?? null,

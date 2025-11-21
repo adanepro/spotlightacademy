@@ -201,4 +201,25 @@ class StudentDashboardController extends Controller
             'data' => $data,
         ], 200);
     }
+
+
+    // all course the student is enrolled in progress average progress
+    public function getCourseProgressAverage()
+    {
+        $student = Auth::user()->student;
+        $enrollments = $student->enrollments;
+        $totalCourses = $enrollments->count();
+        $totalProgress = $enrollments->sum('progress');
+        $averageProgress = $totalCourses > 0 ? $totalProgress / $totalCourses : 0;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Course progress average fetched successfully',
+            'data' => [
+                'total_courses' => $totalCourses,
+                'total_progress' => $totalProgress,
+                'average_progress' => $averageProgress,
+            ],
+        ], 200);
+    }
 }
