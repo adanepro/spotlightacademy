@@ -145,7 +145,7 @@ class ProjectSubmissionController extends NotificationController
                 'status' => 'success',
                 'message' => 'Project submitted successfully.',
                 'data' => $submission,
-                    // 'activity' => $activity,
+                // 'activity' => $activity,
 
             ], 200);
         } catch (\Exception $e) {
@@ -164,17 +164,49 @@ class ProjectSubmissionController extends NotificationController
     {
         $student = Auth::user()->student;
 
+        if (! $student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized: Only students can access this.',
+            ], 403);
+        }
+
+        // Fetch only submitted projects
         $submissions = ProjectSubmission::whereHas('enrollment', function ($q) use ($student) {
             $q->where('student_id', $student->id);
         })
+            ->where('status', 'submitted')
             ->with(['project', 'course', 'enrollmentProject'])
             ->latest()
             ->get();
 
+        // Format and determine late / ontime for each submission
+        $formatted = $submissions->map(function ($submission) {
+
+            $submittedAt = Carbon::parse($submission->created_at);
+            $endDate = Carbon::parse($submission->project->end_date);
+
+            $submissionStatus = $submittedAt->gt($endDate) ? 'late' : 'ontime';
+
+            return [
+                'project_id'           => $submission->project->id,
+                'project_title'        => $submission->project->title,
+                'course_id'            => $submission->course->id,
+                'course_name'          => $submission->course->name,
+                'project_enrollment_id' => $submission->enrollmentProject->id,
+                'status'               => $submission->status,
+                'submission_status'    => $submissionStatus, // ⭐ Added
+                'review_comments'      => $submission->review_comments,
+                'submitted_at'         => $submittedAt->toDateTimeString(),
+                'file'                 => $submission->getFirstMediaUrl('project_file') ?? null,
+                'link'                 => $submission->link ?? null,
+            ];
+        });
+
         return response()->json([
             'status' => 'success',
             'message' => 'Project submissions retrieved successfully.',
-            'data' => $submissions,
+            'data' => $formatted,
         ], 200);
     }
 
@@ -275,13 +307,14 @@ class ProjectSubmissionController extends NotificationController
             ], 403);
         }
 
-        $upcomingProjects = Project::whereHas('enrollments', function ($q) use ($student) {
+        $upcomingProjects = Project::whereHas('enrollmentProjects.enrollment', function ($q) use ($student) {
             $q->where('student_id', $student->id);
         })
             ->where('start_date', '>=', now())
             ->with(['course'])
             ->latest()
             ->get();
+
 
         if ($upcomingProjects->isEmpty()) {
             return response()->json([
