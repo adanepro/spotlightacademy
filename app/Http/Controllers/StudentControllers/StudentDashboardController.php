@@ -182,7 +182,6 @@ class StudentDashboardController extends Controller
                     'enrollment_project_id' => $enrollmentProject?->id,
                     'status' => $enrollmentProject?->status ?? 'not_started',
                     'project_description' => $project->description ?? null,
-                    'submission_link' => $enrollmentProject?->link,
                     'created_by' => $project->createdBy?->user->full_name ?? null,
                 ];
             }),
@@ -324,6 +323,79 @@ class StudentDashboardController extends Controller
                 'passed_quizzes' => $passedQuizzes,
                 'evaluated_quizzes' => $evaluatedQuizzes,
             ],
+        ], 200);
+    }
+
+    public function getExamByCourseId($courseId)
+    {
+        $student = Auth::user()->student;
+
+        if (!$student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized: Only students can access this resource.',
+            ], 403);
+        }
+
+        $enrollment = $student->enrollments()->where('course_id', $courseId)->first();
+
+        $exams = Exam::where('course_id', $courseId)
+            ->with(['createdBy.user'])
+            ->get();
+
+        $exams = $exams->map(function ($exam) use ($enrollment) {
+            $enrollmentExam = $enrollment?->exams()->where('exam_id', $exam->id)->first();
+
+            return [
+                'exam_id' => $exam->id,
+                'exam_title' => $exam->title ?? null,
+                'enrollment_exam_id' => $enrollmentExam?->id,
+                'status' => $enrollmentExam?->status ?? 'not_started',
+                'created_by' => $exam->createdBy?->user->full_name ?? null,
+                'questions' => $exam->questions ?? null,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exams fetched successfully',
+            'data' => $exams,
+        ], 200);
+    }
+
+    public function getProjectByCourseId($courseId)
+    {
+        $student = Auth::user()->student;
+
+        if (!$student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized: Only students can access this resource.',
+            ], 403);
+        }
+
+        $enrollment = $student->enrollments()->where('course_id', $courseId)->first();
+
+        $projects = Project::where('course_id', $courseId)
+            ->with(['createdBy.user'])
+            ->get();
+
+        $projects = $projects->map(function ($project) use ($enrollment) {
+            $enrollmentProject = $enrollment?->projects()->where('project_id', $project->id)->first();
+
+            return [
+                'project_id' => $project->id,
+                'project_title' => $project->title ?? null,
+                'enrollment_project_id' => $enrollmentProject?->id,
+                'status' => $enrollmentProject?->status ?? 'not_started',
+                'project_description' => $project->description ?? null,
+                'created_by' => $project->createdBy?->user->full_name ?? null,
+            ];
+        });
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Projects fetched successfully',
+            'data' => $projects,
         ], 200);
     }
 }
