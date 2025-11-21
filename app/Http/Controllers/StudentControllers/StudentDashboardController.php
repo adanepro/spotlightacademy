@@ -4,6 +4,7 @@ namespace App\Http\Controllers\StudentControllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\EnrollmentProject;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Project;
@@ -243,64 +244,47 @@ class StudentDashboardController extends Controller
             ], 403);
         }
 
-        $enrollmentIds = $student->enrollments()->pluck('id');
+        // 1. Get all enrollment_projects of the student
+        $enrollmentProjects = EnrollmentProject::whereHas('enrollment', function ($q) use ($student) {
+            $q->where('student_id', $student->id);
+        })->pluck('id');
 
-        // PROJECTS
-        $upcomingProjects = Project::whereHas('enrollmentProjects', function ($q) use ($enrollmentIds) {
-            $q->whereIn('enrollment_id', $enrollmentIds);
-        })
-            ->where('start_date', '>', now())
+        // 2. Get all project_ids assigned to this student
+        $projectIds = EnrollmentProject::whereIn('id', $enrollmentProjects)
+            ->pluck('project_id');
+
+        // ============================
+        // Upcoming Projects
+        // ============================
+        $upcomingProjects = Project::whereIn('id', $projectIds)
+            ->where('status', 'upcoming')
             ->count();
 
-        $submittedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+        // ============================
+        // Submitted Projects
+        // ============================
+        $submittedProjects = ProjectSubmission::whereIn('enrollment_project_id', $enrollmentProjects)
             ->where('status', 'submitted')
             ->count();
 
-        $failedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+        // ============================
+        // Failed Projects
+        // ============================
+        $failedProjects = ProjectSubmission::whereIn('enrollment_project_id', $enrollmentProjects)
             ->where('status', 'failed')
             ->count();
 
-        $passedProjects = ProjectSubmission::whereIn('enrollment_id', $enrollmentIds)
+        // ============================
+        // Passed Projects
+        // ============================
+        $passedProjects = ProjectSubmission::whereIn('enrollment_project_id', $enrollmentProjects)
             ->where('status', 'passed')
             ->count();
 
-        $evaluatedProjects = $failedProjects + $passedProjects;
-
-        // EXAMS
-        $upcomingExams = Exam::whereHas('enrollmentExams', function ($q) use ($enrollmentIds) {
-            $q->whereIn('enrollment_id', $enrollmentIds);
-        })
-            ->where('start_date', '>', now())
-            ->count();
-
-        $submittedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'submitted')
-            ->count();
-
-        $failedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'failed')
-            ->count();
-
-        $passedExams = ExamSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'passed')
-            ->count();
-
-        $evaluatedExams = $failedExams + $passedExams;
-
-        // QUIZZES
-        $submittedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'submitted')
-            ->count();
-
-        $failedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'failed')
-            ->count();
-
-        $passedQuizzes = QuizSubmission::whereIn('enrollment_id', $enrollmentIds)
-            ->where('status', 'passed')
-            ->count();
-
-        $evaluatedQuizzes = $failedQuizzes + $passedQuizzes;
+        // ============================
+        // Evaluated Projects = passed + failed
+        // ============================
+        $evaluatedProjects = $passedProjects + $failedProjects;
 
         return response()->json([
             'status' => 'success',
@@ -312,16 +296,16 @@ class StudentDashboardController extends Controller
                 'passed_projects' => $passedProjects,
                 'evaluated_projects' => $evaluatedProjects,
 
-                'upcoming_exams' => $upcomingExams,
-                'submitted_exams' => $submittedExams,
-                'failed_exams' => $failedExams,
-                'passed_exams' => $passedExams,
-                'evaluated_exams' => $evaluatedExams,
+                // 'upcoming_exams' => $upcomingExams,
+                // 'submitted_exams' => $submittedExams,
+                // 'failed_exams' => $failedExams,
+                // 'passed_exams' => $passedExams,
+                // 'evaluated_exams' => $evaluatedExams,
 
-                'submitted_quizzes' => $submittedQuizzes,
-                'failed_quizzes' => $failedQuizzes,
-                'passed_quizzes' => $passedQuizzes,
-                'evaluated_quizzes' => $evaluatedQuizzes,
+                // 'submitted_quizzes' => $submittedQuizzes,
+                // 'failed_quizzes' => $failedQuizzes,
+                // 'passed_quizzes' => $passedQuizzes,
+                // 'evaluated_quizzes' => $evaluatedQuizzes,
             ],
         ], 200);
     }
