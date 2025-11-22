@@ -79,28 +79,28 @@ class AuthController extends Controller
             $credentials['username'] = $request->username;
         }
 
-        // if (! Auth::validate($credentials)) {
-        //     return response()->json(['message' => 'Invalid credentials'], 400);
-        // }
+        if (! Auth::validate($credentials)) {
+            return response()->json(['message' => 'Invalid credentials'], 400);
+        }
 
-        // if ($user->verified_at === null) {
-        //     $otp = $this->generateOTP($user);
+        if ($user->verified_at === null) {
+            $otp = $this->generateOTP($user);
 
-        //     app(OTPController::class)->sendSMS(
-        //         $user->phone_number,
-        //         $otp,
-        //         'Login Verification'
-        //     );
-        //     // Test
-        //     return response()->json([
-        //         'message' => 'Account not verified. OTP sent to your phone.',
-        //         'otp' => $otp,
-        //         'user' => [
-        //             'is_verified' => $user->verified_at !== null,
-        //         ],
+            app(OTPController::class)->sendSMS(
+                $user->phone_number,
+                $otp,
+                'Login Verification'
+            );
+            // Test
+            return response()->json([
+                'message' => 'Account not verified. OTP sent to your phone.',
+                'otp' => $otp,
+                'user' => [
+                    'is_verified' => $user->verified_at !== null,
+                ],
 
-        //     ], 403);
-        // }
+            ], 403);
+        }
 
         if (! $token = Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 400);
