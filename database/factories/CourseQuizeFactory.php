@@ -38,8 +38,6 @@ class CourseQuizeFactory extends Factory
         return [
             'module_id' => $module,
             'questions' => [$question],
-            'start_date' => $this->faker->dateTime(),
-            'end_date' => $this->faker->dateTime(),
             'created_by' => $trainer,
         ];
     }
