@@ -195,7 +195,7 @@ class ProjectSubmissionController extends NotificationController
                 'course_name'          => $submission->course->name,
                 'project_enrollment_id' => $submission->enrollmentProject->id,
                 'status'               => $submission->status,
-                'submission_status'    => $submissionStatus, 
+                'submission_status'    => $submissionStatus,
                 'review_comments'      => $submission->review_comments,
                 'submitted_at'         => $submittedAt->toDateTimeString(),
                 'file'                 => $submission->getFirstMediaUrl('project_file') ?? null,
@@ -285,6 +285,7 @@ class ProjectSubmissionController extends NotificationController
                 'remedial_of'  => $enrollmentProject?->remedial_of ?? null,
                 'resubmission_count' => $enrollmentProject->submission->resubmission_count ?? 0,
                 'status'       => $project->status,
+                'is_submitted' => $enrollmentProject?->submission ? true : false,
             ];
         });
 

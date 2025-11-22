@@ -172,6 +172,7 @@ class StudentDashboardController extends Controller
                             'enrollment_quiz_id' => $enrollmentQuiz?->id,
                             'status' => $enrollmentQuiz?->status ?? 'not_started',
                             'created_by' => $quiz->createdBy?->user->full_name ?? null,
+                            'is_submitted' => $enrollmentQuiz?->submission ? true : false,
                         ];
                     }),
                 ];
@@ -186,6 +187,7 @@ class StudentDashboardController extends Controller
                     'status' => $enrollmentProject?->status ?? 'not_started',
                     'project_description' => $project->description ?? null,
                     'created_by' => $project->createdBy?->user->full_name ?? null,
+                    'is_submitted' => $enrollmentProject?->submission ? true : false,
                 ];
             }),
             'exams' => $course->exams->map(function ($exam) use ($enrollment) {
@@ -199,6 +201,7 @@ class StudentDashboardController extends Controller
                     'score' => $enrollmentExam?->score ?? null,
                     'created_by' => $exam->createdBy?->user->full_name ?? null,
                     'questions' => $exam->questions ?? null,
+                    'is_submitted' => $enrollmentExam?->submission ? true : false,
                 ];
             }),
         ];
@@ -418,6 +421,7 @@ class StudentDashboardController extends Controller
                 'status' => $enrollmentExam?->status ?? 'not_started',
                 'created_by' => $exam->createdBy?->user->full_name ?? null,
                 'questions' => $exam->questions ?? null,
+                'is_submitted' => $enrollmentExam?->submission ? true : false,
             ];
         });
 
@@ -455,6 +459,7 @@ class StudentDashboardController extends Controller
                 'status' => $enrollmentProject?->status ?? 'not_started',
                 'project_description' => $project->description ?? null,
                 'created_by' => $project->createdBy?->user->full_name ?? null,
+                'is_submitted' => $enrollmentProject?->submission ? true : false,
             ];
         });
         return response()->json([

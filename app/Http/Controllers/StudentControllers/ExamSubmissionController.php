@@ -201,6 +201,7 @@ class ExamSubmissionController extends NotificationController
                 'remedial_of' => $enrollmentExam?->remedial_of ?? null,
                 'resubmission_count' => $enrollmentExam->submission->resubmission_count ?? 0,
                 'status' => $exam->status,
+                'is_submitted' => $enrollmentExam?->submission ? true : false,
             ];
         });
 
