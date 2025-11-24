@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AdminDashBoardController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\ExpertController;
@@ -88,6 +89,9 @@ Route::group([
         Route::get('learning-progress', [ActivityLogController::class, 'getLearningProgress']);
         Route::get('session-usage-analytics', [ActivityLogController::class, 'getSessionUsageAnalytics']);
         Route::get('gender-based-analytics', [ActivityLogController::class, 'getGenderBasedAnalytics']);
+        Route::get('activity-trend', [AnalyticsController::class, 'activityTrend']);
+        Route::get('course-completion-status', [AnalyticsController::class, 'courseCompletionStatus']);
+        Route::get('analytics-overview', [AnalyticsController::class, 'Overview']);
 
         Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
         Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
