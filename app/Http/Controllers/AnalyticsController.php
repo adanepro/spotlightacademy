@@ -92,7 +92,7 @@ class AnalyticsController extends Controller
             case 'month':
                 $from = now()->startOfMonth();
                 $to = now()->endOfMonth();
-                $groupBy = 'day';
+                $groupBy = 'week';
                 break;
             case 'year':
                 $from = now()->startOfYear();
@@ -270,10 +270,6 @@ class AnalyticsController extends Controller
             $cumulativeData[] = $cumulative;
         }
 
-        // Prepare metadata
-        $totalActivities = Activity::count();
-        $totalActivitiesInPeriod = array_sum($periodData);
-
         // Return response
         return response()->json([
             'status' => 'success',
@@ -282,11 +278,8 @@ class AnalyticsController extends Controller
                 'period' => $period,
                 'groupBy' => $groupBy,
                 'periodData' => $periodData,
-                'cumulativeData' => $cumulativeData,
                 'labels' => $labels->values()->all(),
                 'ranges' => $ranges->values()->all(),
-                'totalActivities' => $totalActivities,
-                'totalActivitiesInPeriod' => $totalActivitiesInPeriod,
             ],
         ], 200);
     }
