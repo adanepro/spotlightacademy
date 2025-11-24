@@ -102,6 +102,8 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $authUserId = Auth::id();
+
         $jti = (string) Str::uuid();
 
 
@@ -115,7 +117,7 @@ class AuthController extends Controller
 
         DB::table('sessions')->insert([
             'id'            => $jti,
-            'user_id'       => $user->id,
+            'user_id'       => $authUserId,
             'ip_address'    => $request->ip(),
             'user_agent'    => $request->userAgent(),
             'payload'       => json_encode(['revoked' => false]),
