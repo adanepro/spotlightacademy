@@ -324,12 +324,27 @@ class ActivityLogController extends Controller
 
     public function getSessionUsageAnalytics(Request $request)
     {
-        // Get date filters from request
         $fromDate = $request->from;
         $toDate = $request->to;
 
-        // Total login count per student
-        // Get login activities grouped by user (optimized with eager loading)
+        $dbDriver = config('database.default');
+        $isPostgreSQL = $dbDriver === 'pgsql';
+
+        /*
+    |--------------------------------------------------------------------------
+    |  DATE FORMATTERS FOR MYSQL & POSTGRESQL
+    |--------------------------------------------------------------------------
+    */
+        $dateFormatDay   = $isPostgreSQL ? "DATE(created_at)"               : "DATE(created_at)";
+        $dateFormatWeek  = $isPostgreSQL ? "TO_CHAR(created_at, 'IYYY-IW')" : "DATE_FORMAT(created_at, '%x-%v')";
+        $dateFormatMonth = $isPostgreSQL ? "TO_CHAR(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
+
+
+        /*
+    |--------------------------------------------------------------------------
+    | LOGIN COUNT PER STUDENT
+    |--------------------------------------------------------------------------
+    */
         $loginActivities = Activity::select('causer_id', DB::raw('count(*) as login_count'))
             ->whereNotNull('causer_id')
             ->where('causer_type', 'App\Models\User')
@@ -337,61 +352,47 @@ class ActivityLogController extends Controller
                 $query->where('description', 'like', '%login%')
                     ->orWhere('description', 'like', '%logged in%');
             })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
             ->groupBy('causer_id')
             ->get();
 
-        // Get all user IDs from the activities
         $userIds = $loginActivities->pluck('causer_id')->toArray();
 
-        // Eager load users with students in one query
         $users = \App\Models\User::with('student')
             ->whereIn('id', $userIds)
             ->whereHas('student')
             ->get()
             ->keyBy('id');
 
-        // Filter to only students and map the data
         $loginCountPerStudent = $loginActivities->map(function ($item) use ($users) {
             $user = $users->get($item->causer_id);
-
-            // Only include if user exists and has a student relationship
-            if (!$user || !$user->student) {
-                return null;
-            }
+            if (!$user || !$user->student) return null;
 
             return [
-                'student_id' => $user->student->id,
+                'student_id'   => $user->student->id,
                 'student_name' => $user->full_name,
-                'login_count' => $item->login_count,
+                'login_count'  => $item->login_count,
             ];
-        })
-            ->filter() // Remove null values
-            ->values();
+        })->filter()->values();
 
-        // Average time spent per session (calculate difference between login and logout events)
+
+        /*
+    |--------------------------------------------------------------------------
+    | AVERAGE SESSION TIME
+    |--------------------------------------------------------------------------
+    */
         $sessions = Activity::select('causer_id', 'description', 'created_at')
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
+            ->whereHasMorph('causer', ['App\Models\User'], fn($q) => $q->whereHas('student'))
             ->where(function ($query) {
                 $query->where('description', 'like', '%login%')
                     ->orWhere('description', 'like', '%logged in%')
                     ->orWhere('description', 'like', '%logout%')
                     ->orWhere('description', 'like', '%logged out%');
             })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
             ->orderBy('causer_id')
             ->orderBy('created_at')
             ->get();
@@ -400,7 +401,7 @@ class ActivityLogController extends Controller
         $currentLogin = null;
 
         foreach ($sessions as $activity) {
-            $isLogin = stripos($activity->description, 'login') !== false && stripos($activity->description, 'logout') === false;
+            $isLogin  = stripos($activity->description, 'login') !== false && stripos($activity->description, 'logout') === false;
             $isLogout = stripos($activity->description, 'logout') !== false;
 
             if ($isLogin) {
@@ -412,124 +413,115 @@ class ActivityLogController extends Controller
             }
         }
 
-        $averageSessionTime = count($sessionDurations) > 0
+        $averageSessionTime = count($sessionDurations)
             ? round(array_sum($sessionDurations) / count($sessionDurations), 2)
             : 0;
 
-        // Active users per day/week/month
-        // PostgreSQL compatible: DATE() or CAST for date extraction
-        $activeUsersPerDay = Activity::select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(DISTINCT causer_id) as active_users'))
+
+        /*
+    |--------------------------------------------------------------------------
+    | ACTIVE USERS PER DAY
+    |--------------------------------------------------------------------------
+    */
+        $activeUsersPerDay = Activity::select(
+            DB::raw("$dateFormatDay as date"),
+            DB::raw("COUNT(DISTINCT causer_id) as active_users")
+        )
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->whereHasMorph('causer', ['App\Models\User'], fn($q) => $q->whereHas('student'))
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
+            ->groupBy(DB::raw("$dateFormatDay"))
             ->orderBy('date', 'desc')
             ->limit(30)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'date' => $item->date,
-                    'active_users' => $item->active_users,
-                ];
-            });
+            ->get();
 
-        // PostgreSQL compatible: TO_CHAR for week formatting (IYYY-IW = ISO year and week)
-        $activeUsersPerWeek = Activity::select(DB::raw("TO_CHAR(created_at, 'IYYY-IW') as week"), DB::raw('COUNT(DISTINCT causer_id) as active_users'))
+
+        /*
+    |--------------------------------------------------------------------------
+    | ACTIVE USERS PER WEEK
+    |--------------------------------------------------------------------------
+    */
+        $activeUsersPerWeek = Activity::select(
+            DB::raw("$dateFormatWeek as week"),
+            DB::raw("COUNT(DISTINCT causer_id) as active_users")
+        )
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
-            ->groupBy(DB::raw("TO_CHAR(created_at, 'IYYY-IW')"))
+            ->whereHasMorph('causer', ['App\Models\User'], fn($q) => $q->whereHas('student'))
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
+            ->groupBy(DB::raw("$dateFormatWeek"))
             ->orderBy('week', 'desc')
             ->limit(12)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'week' => $item->week,
-                    'active_users' => $item->active_users,
-                ];
-            });
+            ->get();
 
-        // PostgreSQL compatible: TO_CHAR for month formatting
-        $activeUsersPerMonth = Activity::select(DB::raw("TO_CHAR(created_at, 'YYYY-MM') as month"), DB::raw('COUNT(DISTINCT causer_id) as active_users'))
+
+        /*
+    |--------------------------------------------------------------------------
+    | ACTIVE USERS PER MONTH
+    |--------------------------------------------------------------------------
+    */
+        $activeUsersPerMonth = Activity::select(
+            DB::raw("$dateFormatMonth as month"),
+            DB::raw("COUNT(DISTINCT causer_id) as active_users")
+        )
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
-            ->groupBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM')"))
+            ->whereHasMorph('causer', ['App\Models\User'], fn($q) => $q->whereHas('student'))
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
+            ->groupBy(DB::raw("$dateFormatMonth"))
             ->orderBy('month', 'desc')
             ->limit(12)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'month' => $item->month,
-                    'active_users' => $item->active_users,
-                ];
-            });
+            ->get();
 
-        // Institution-wise activity distribution
+
+        /*
+    |--------------------------------------------------------------------------
+    | INSTITUTION-WISE ACTIVITY DISTRIBUTION
+    |--------------------------------------------------------------------------
+    */
         $institutionWiseActivity = Activity::select('causer_id', DB::raw('count(*) as activity_count'))
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
+            ->whereHasMorph('causer', ['App\Models\User'], fn($q) => $q->whereHas('student'))
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
             ->groupBy('causer_id')
             ->with('causer.student.institution')
             ->get()
-            ->groupBy(function ($item) {
-                return $item->causer->student->institution_id ?? 'unknown';
-            })
+            ->groupBy(fn($item) => $item->causer->student->institution_id ?? 'unknown')
             ->map(function ($group, $institutionId) {
                 $firstItem = $group->first();
+
                 return [
-                    'institution_id' => $institutionId !== 'unknown' ? $institutionId : null,
+                    'institution_id'   => $institutionId !== 'unknown' ? $institutionId : null,
                     'institution_name' => $firstItem->causer->student->institution->name ?? 'Unknown',
                     'total_activities' => $group->sum('activity_count'),
-                    'student_count' => $group->count(),
+                    'student_count'    => $group->count(),
                 ];
             })
             ->values();
 
+
+        /*
+    |--------------------------------------------------------------------------
+    | RESPONSE
+    |--------------------------------------------------------------------------
+    */
         return response()->json([
             'status' => 'success',
             'message' => 'Session and usage analytics fetched successfully',
             'filters' => [
                 'from' => $fromDate ?? 'all',
-                'to' => $toDate ?? 'all',
+                'to'   => $toDate ?? 'all',
             ],
             'data' => [
-                'login_count_per_student' => $loginCountPerStudent,
+                'login_count_per_student'      => $loginCountPerStudent,
                 'average_session_time_minutes' => $averageSessionTime,
-                'total_sessions_analyzed' => count($sessionDurations),
-                'active_users_per_day' => $activeUsersPerDay,
-                'active_users_per_week' => $activeUsersPerWeek,
-                'active_users_per_month' => $activeUsersPerMonth,
-                'institution_wise_activity' => $institutionWiseActivity,
+                'total_sessions_analyzed'      => count($sessionDurations),
+                'active_users_per_day'         => $activeUsersPerDay,
+                'active_users_per_week'        => $activeUsersPerWeek,
+                'active_users_per_month'       => $activeUsersPerMonth,
+                'institution_wise_activity'    => $institutionWiseActivity,
             ],
         ], 200);
     }
