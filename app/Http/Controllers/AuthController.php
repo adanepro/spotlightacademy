@@ -210,34 +210,36 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            // Get current JWT token
-            $token = JWTAuth::getToken();
+            // Get the token from the request header
+            $token = $request->bearerToken();
 
             if (!$token) {
                 return response()->json(['message' => 'Token not provided'], 400);
             }
 
-            $payload = JWTAuth::getPayload($token);
+            // Decode token to get jti
+            $payload = JWTAuth::setToken($token)->getPayload();
             $jti = $payload->get('jti');
 
-            // Invalidate the JWT
+            // Invalidate JWT token
             JWTAuth::invalidate($token);
 
-            // Delete the session from DB
+            // Delete session from DB
             DB::table('sessions')->where('id', $jti)->delete();
 
-            // Optional: log activity
+            // Log activity (optional)
             activity()
                 ->causedBy(Auth::user())
                 ->log('logged out');
 
-            return response()->json(['message' => 'Successfully logged out'], 200);
-        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-            return response()->json(['message' => 'Token already expired'], 401);
+            return response()->json(['message' => 'Successfully logged out']);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            return response()->json(['message' => 'Token is invalid'], 401);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to logout', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Logout failed', 'error' => $e->getMessage()], 500);
         }
     }
+
 
     /**
      * Refresh a token.
