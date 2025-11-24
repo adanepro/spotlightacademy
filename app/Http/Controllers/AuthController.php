@@ -220,6 +220,7 @@ class AuthController extends Controller
             // Decode token to get jti
             $payload = JWTAuth::setToken($token)->getPayload();
             $jti = $payload->get('jti');
+            dd($jti, DB::table('sessions')->pluck('id'));
 
             // Invalidate JWT token
             JWTAuth::invalidate($token);
