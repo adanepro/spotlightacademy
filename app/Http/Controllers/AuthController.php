@@ -178,11 +178,13 @@ class AuthController extends Controller
     public function logout()
     {
 
-        Auth::logout();
+        $user = Auth::user();
 
         activity()
-            ->causedBy(Auth::user())
+            ->causedBy($user)
             ->log('logged out');
+
+        Auth::logout();
 
         return response()->json(['message' => 'Successfully logged out']);
     }
