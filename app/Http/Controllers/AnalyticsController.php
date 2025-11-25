@@ -390,16 +390,16 @@ class AnalyticsController extends Controller
         $activeStudentsPercentage = $totalActivities > 0 ? round(($activeStudents / $totalActivities) * 100, 2) : 0;
 
         // most asctive students total count in last 7 days
-        $mostActiveStudentsCount = Activity::select('causer_id', DB::raw('count(*) as total_activities'))
+        $mostActiveStudents = Activity::select('causer_id', DB::raw('count(*) as total_activities'))
             ->whereNotNull('causer_id')
             ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
                 $query->whereHas('student');
             })
             ->whereDate('created_at', '>=', now()->subWeek())
             ->groupBy('causer_id')
-            ->orderBy('total_activities', 'desc')
-            ->limit(5)
-            ->count();
+            ->orderByDesc('total_activities')
+            ->get();
+        $mostActiveStudentsCount = $mostActiveStudents->count();
 
         return response()->json([
             'status' => 'success',
@@ -850,15 +850,5 @@ class AnalyticsController extends Controller
                     'message' => 'Invalid assessment type. Choose quiz, exam, or project.',
                 ], 400);
         }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Assessment insights fetched successfully',
-            'data' => [
-                'total_submissions' => $totalSubmissions,
-                'passed_submissions' => $passedSubmissions,
-                'failed_submissions' => $failedSubmissions,
-            ],
-        ]);
     }
 }
