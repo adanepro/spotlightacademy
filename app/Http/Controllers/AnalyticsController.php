@@ -3,10 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CourseQuize;
 use App\Models\Enrollment;
+use App\Models\EnrollmentLecture;
+use App\Models\EnrollmentModule;
+use App\Models\Exam;
+use App\Models\ExamSubmission;
 use App\Models\Module;
+use App\Models\Project;
+use App\Models\ProjectSubmission;
+use App\Models\QuizSubmission;
 use App\Models\Student;
+use App\Models\Trainer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Activity;
 
 class AnalyticsController extends Controller
@@ -66,7 +76,6 @@ class AnalyticsController extends Controller
                 'course_completion_rate_percentage' => $courseCompletionRatePercentage,
             ],
         ], 200);
-
     }
     /**
      * Get activity trend
@@ -352,6 +361,504 @@ class AnalyticsController extends Controller
             'message' => 'Course completion status fetched successfully',
             'data' => $data,
             'default_course_id' => $courseId, // optional
+        ]);
+    }
+
+    /* =====================================
+     *  Engagement Overview
+     * ===================================== */
+    public function engagementOverview()
+    {
+        // total activities
+        $totalActivities = Activity::count();
+        // activities growth in percent this week
+        $activitiesGrowth = Activity::whereDate('created_at', '>=', now()->subWeek())->count();
+        $activitiesGrowthPercentage = $totalActivities > 0 ? round(($activitiesGrowth / $totalActivities) * 100, 2) : 0;
+
+        // average activities per day
+        $averageActivitiesPerDay = round($totalActivities / now()->diffInDays(now()->subWeek()), 2);
+        // average activities per day from last week geowth
+        $averageActivitiesPerDayFromLastWeekGrowth = Activity::whereDate('created_at', '>=', now()->subWeek())->count();
+        $averageActivitiesPerDayFromLastWeekGrowthPercentage = $totalActivities > 0 ? round(($averageActivitiesPerDayFromLastWeekGrowth / $totalActivities) * 100, 2) : 0;
+
+        // active students count
+        $activeStudents = Student::whereHas('enrollments', function ($query) {
+            $query->where('status', 'completed');
+            $query->whereDate('completed_at', '>=', now()->subWeek());
+        })->count();
+        // active students percentage
+        $activeStudentsPercentage = $totalActivities > 0 ? round(($activeStudents / $totalActivities) * 100, 2) : 0;
+
+        // most asctive students total count in last 7 days
+        $mostActiveStudentsCount = Activity::select('causer_id', DB::raw('count(*) as total_activities'))
+            ->whereNotNull('causer_id')
+            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
+                $query->whereHas('student');
+            })
+            ->whereDate('created_at', '>=', now()->subWeek())
+            ->groupBy('causer_id')
+            ->orderBy('total_activities', 'desc')
+            ->limit(5)
+            ->count();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Engagement overview fetched successfully',
+            'data' => [
+                'total_activities' => $totalActivities,
+                'activities_growth' => $activitiesGrowth,
+                'activities_growth_percentage' => $activitiesGrowthPercentage,
+                'average_activities_per_day' => $averageActivitiesPerDay,
+                'average_activities_per_day_from_last_week_growth' => $averageActivitiesPerDayFromLastWeekGrowth,
+                'average_activities_per_day_from_last_week_growth_percentage' => $averageActivitiesPerDayFromLastWeekGrowthPercentage,
+                'active_students' => $activeStudents,
+                'active_students_percentage' => $activeStudentsPercentage,
+                'most_active_students_count' => $mostActiveStudentsCount,
+            ],
+        ], 200);
+    }
+
+    /* =====================================
+     *  Learning progress
+     * ===================================== */
+
+    public function learningOverview()
+    {
+        // lectures watched count
+        $lecturesWatched = EnrollmentLecture::where('is_watched', true)->count();
+        // watch growth from last week
+        $lectureWatchGrowth = EnrollmentLecture::where('is_watched', true)
+            ->whereDate('updated_at', '>=', now()->subWeek())
+            ->count();
+        $lectureWatchGrowthPercentage = $lecturesWatched > 0 ? round(($lectureWatchGrowth / $lecturesWatched) * 100, 2) : 0;
+
+        // modules completed count
+        $moduleCompletedCount = EnrollmentModule::where('status', 'completed')->count();
+        // modules completed growth from last week
+        $moduleCompletedGrowth = EnrollmentModule::where('status', 'completed')
+            ->whereDate('updated_at', '>=', now()->subWeek())
+            ->count();
+        $moduleCompletedGrowthPercentage = $moduleCompletedCount > 0 ? round(($moduleCompletedGrowth / $moduleCompletedCount) * 100, 2) : 0;
+
+        // course completion rate
+        $courseCompletedCount = Enrollment::where('status', 'completed')->count();
+        $totalEnrollmentCount = Enrollment::count();
+        $courseCompletionRate = $totalEnrollmentCount > 0 ? round(($courseCompletedCount / $totalEnrollmentCount) * 100, 2) : 0;
+
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Learning overview fetched successfully',
+            'data' => [
+                'total_lectures_watched' => $lecturesWatched,
+                'watch_growth' => $lectureWatchGrowth,
+                'watch_growth_percentage' => $lectureWatchGrowthPercentage,
+                'module_completed_count' => $moduleCompletedCount,
+                'module_completed_growth' => $moduleCompletedGrowth,
+                'module_completed_growth_percentage' => $moduleCompletedGrowthPercentage,
+                'course_completion_rate' => $courseCompletionRate,
+            ],
+        ]);
+    }
+
+    public function moduleCompletionRate()
+    {
+        // module completion rate per module list
+        $modules = Module::withCount('enrollments')->get();
+        $modules = $modules->map(function ($module) {
+            $completedEnrollments = $module->enrollments()->whereHas('modules', function ($query) {
+                $query->where('status', 'completed');
+            })->count();
+
+            return [
+                'module_id' => $module->id,
+                'module_name' => $module->title,
+                'total_enrollments' => $module->enrollments_count,
+                'completed_enrollments' => $completedEnrollments,
+                'completion_rate' => $module->enrollments_count > 0 ? round(($completedEnrollments / $module->enrollments_count) * 100, 2) : 0,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Module completion rate fetched successfully',
+            'data' => $modules,
+        ]);
+    }
+
+    /* =====================================
+     *  Assessment Participation
+     * ===================================== */
+
+    public function assessmentOverview()
+    {
+        // where status in submitted or failed
+        $quizSubmission = QuizSubmission::whereIn('status', ['submitted', 'failed'])->count();
+        // growth from last week
+        $quizSubmissionGrowth = QuizSubmission::whereIn('status', ['submitted', 'failed'])
+            ->whereDate('created_at', '>=', now()->subWeek())
+            ->count();
+        $quizSubmissionGrowthPercentage = $quizSubmission > 0 ? round(($quizSubmissionGrowth / $quizSubmission) * 100, 2) : 0;
+
+        // average quiz submissions per student
+        $averageQuizSubmissionPerStudent = round($quizSubmission / Student::count(), 2);
+
+        // pass ratio
+        $quizPass = QuizSubmission::where('status', 'passed')->count();
+        $quizPassRatio = $quizSubmission > 0 ? round(($quizPass / $quizSubmission) * 100, 2) : 0;
+
+        // where status in submitted or failed
+        $examSubmission = ExamSubmission::whereIn('status', ['submitted', 'failed'])->count();
+        // growth from last week
+        $examSubmissionGrowth = ExamSubmission::whereIn('status', ['submitted', 'failed'])
+            ->whereDate('created_at', '>=', now()->subWeek())
+            ->count();
+        $examSubmissionGrowthPercentage = $examSubmission > 0 ? round(($examSubmissionGrowth / $examSubmission) * 100, 2) : 0;
+
+        // average exam submissions per student
+        $averageExamSubmissionPerStudent = round($examSubmission / Student::count(), 2);
+
+        $examPass = ExamSubmission::where('status', 'passed')->count();
+        $examPassRatio = $examSubmission > 0 ? round(($examPass / $examSubmission) * 100, 2) : 0;
+
+
+        // where status in submitted or failed
+        $projectSubmission = ProjectSubmission::whereIn('status', ['submitted', 'failed'])->count();
+        // growth from last week
+        $projectSubmissionGrowth = ProjectSubmission::whereIn('status', ['submitted', 'failed'])
+            ->whereDate('created_at', '>=', now()->subWeek())
+            ->count();
+        $projectSubmissionGrowthPercentage = $projectSubmission > 0 ? round(($projectSubmissionGrowth / $projectSubmission) * 100, 2) : 0;
+
+        // average project submissions per student
+        $averageProjectSubmissionPerStudent = round($projectSubmission / Student::count(), 2);
+
+        $projectPass = ProjectSubmission::where('status', 'passed')->count();
+        $projectPassRatio = $projectSubmission > 0 ? round(($projectPass / $projectSubmission) * 100, 2) : 0;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Assessment overview fetched successfully',
+            'data' => [
+                'quiz_submission' => $quizSubmission,
+                'quiz_submission_growth' => $quizSubmissionGrowth,
+                'quiz_submission_growth_percentage' => $quizSubmissionGrowthPercentage,
+                'exam_submission' => $examSubmission,
+                'exam_submission_growth' => $examSubmissionGrowth,
+                'exam_submission_growth_percentage' => $examSubmissionGrowthPercentage,
+                'project_submission' => $projectSubmission,
+                'project_submission_growth' => $projectSubmissionGrowth,
+                'project_submission_growth_percentage' => $projectSubmissionGrowthPercentage,
+                'average_quiz_submission_per_student' => $averageQuizSubmissionPerStudent,
+                'average_exam_submission_per_student' => $averageExamSubmissionPerStudent,
+                'average_project_submission_per_student' => $averageProjectSubmissionPerStudent,
+                'quiz_pass_ratio' => $quizPassRatio,
+                'exam_pass_ratio' => $examPassRatio,
+                'project_pass_ratio' => $projectPassRatio,
+            ],
+        ]);
+    }
+
+    public function quizParticipation(Request $request)
+    {
+        $defaultTrainerId = Trainer::first()->id;
+
+        // Use trainer_id from request OR default one
+        $trainerId = $request->trainer_id ?? $defaultTrainerId;
+        $quizzes = CourseQuize::where('created_by', $trainerId)->get();
+
+        // map with submission count and participation rate
+        $data = $quizzes->map(function ($quiz) {
+            $submissionCount = QuizSubmission::where('course_quize_id', $quiz->id)->count();
+            // passed count
+            $passedCount = QuizSubmission::where('course_quize_id', $quiz->id)->where('status', 'passed')->count();
+
+            // failed count
+            $failedCount = QuizSubmission::where('course_quize_id', $quiz->id)->where('status', 'failed')->count();
+
+            $passRate = $submissionCount > 0 ? round(($passedCount / $submissionCount) * 100, 2) : 0;
+
+
+            return [
+                'quiz_id' => $quiz->id,
+                'quiz_name' => $quiz->title,
+                'attmpted' => $submissionCount,
+                'passed' => $passedCount,
+                'failed' => $failedCount,
+                'pass_rate' => $passRate,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Quiz participation fetched successfully',
+            'data' => $data,
+        ]);
+    }
+
+    public function assessmentStatusDistribution()
+    {
+        // quiz status distribution
+        $quizStatusDistribution = QuizSubmission::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get();
+
+        // exam status distribution
+        $examStatusDistribution = ExamSubmission::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get();
+
+        // project status distribution
+        $projectStatusDistribution = ProjectSubmission::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Assessment status distribution fetched successfully',
+            'data' => [
+                'quiz_status_distribution' => $quizStatusDistribution,
+                'exam_status_distribution' => $examStatusDistribution,
+                'project_status_distribution' => $projectStatusDistribution,
+            ],
+        ]);
+    }
+
+    // public function topPerformingStudents(Request $request)
+    // {
+    //     $requestedLimit = $request->limit ?? 5;
+    //     // top performing students based on passed assessments and also add enrollment progress
+    //     $topStudents = Student::select('students.id', 'users.full_name', 'enrollments.progress', DB::raw('count(quiz_submissions.id) + count(exam_submissions.id) + count(project_submissions.id) as total_passed_assessments'))
+    //         ->leftJoin('enrollments', 'enrollments.student_id', '=', 'students.id')
+    //         ->leftJoin('quiz_submissions', function ($join) {
+    //             $join->on('students.id', '=', 'quiz_submissions.student_id')
+    //                 ->where('quiz_submissions.status', 'passed');
+    //         })
+    //         ->leftJoin('exam_submissions', function ($join) {
+    //             $join->on('students.id', '=', 'exam_submissions.student_id')
+    //                 ->where('exam_submissions.status', 'passed');
+    //         })
+    //         ->leftJoin('project_submissions', function ($join) {
+    //             $join->on('students.id', '=', 'project_submissions.student_id')
+    //                 ->where('project_submissions.status', 'passed');
+    //         })
+    //         ->groupBy('students.id', 'students.name')
+    //         ->orderByDesc('total_passed_assessments')
+    //         ->limit($requestedLimit)
+    //         ->get();
+
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'message' => 'Top performing students fetched successfully',
+    //         'data' => $topStudents,
+    //     ]);
+    // }
+
+    public function topPerformingStudents(Request $request)
+    {
+        $limit = $request->limit ?? 5;
+
+        $topStudents = Student::query()
+            ->select(
+                'students.id',
+                'users.full_name',
+                'enrollments.progress',
+
+                DB::raw("
+                SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) +
+                SUM(CASE WHEN exam_submissions.status = 'passed' THEN 1 ELSE 0 END) +
+                SUM(CASE WHEN project_submissions.status = 'passed' THEN 1 ELSE 0 END)
+                AS total_passed_assessments
+            ")
+            )
+            ->leftJoin('users', 'students.user_id', '=', 'users.id')
+            ->leftJoin('enrollments', 'enrollments.student_id', '=', 'students.id')
+
+            ->leftJoin('quiz_submissions', 'quiz_submissions.student_id', '=', 'students.id')
+            ->leftJoin('exam_submissions', 'exam_submissions.student_id', '=', 'students.id')
+            ->leftJoin('project_submissions', 'project_submissions.student_id', '=', 'students.id')
+
+            ->groupBy('students.id', 'users.full_name', 'enrollments.progress')
+            ->orderByDesc('total_passed_assessments')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Top performing students fetched successfully',
+            'data' => $topStudents,
+        ]);
+    }
+
+
+    public function assessmentInsights(Request $request)
+    {
+        $assessmentType = $request->type ?? 'quiz'; // quiz | exam | project
+
+        switch ($assessmentType) {
+            case 'quiz':
+                $totalSubmissions = QuizSubmission::count();
+                $passedSubmissions = QuizSubmission::where('status', 'passed')->count();
+                $failedSubmissions = QuizSubmission::where('status', 'failed')->count();
+                $averagePassRate = $totalSubmissions > 0 ? round(($passedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                $averageFailRate = $totalSubmissions > 0 ? round(($failedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                // most challenging quizzes (with highest fail rate)
+                $mostChallengingQuizzes = CourseQuize::select(
+                    'course_quizes.id',
+                    'course_quizes.title',
+                    DB::raw('COUNT(*) as total'),
+                    DB::raw("SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) as failed_count"),
+                    DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as fail_rate")
+                )
+                    ->leftJoin('quiz_submissions', 'quiz_submissions.course_quize_id', '=', 'course_quizes.id')
+                    ->groupBy('course_quizes.id', 'course_quizes.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('fail_rate')
+                    ->limit(5)
+                    ->get();
+
+                // most successful quizzes (with highest pass rate)
+                $mostSuccessfulQuizzes = CourseQuize::select(
+                    'course_quizes.id',
+                    'course_quizes.title',
+                    DB::raw('COUNT(*) as total'),
+                    DB::raw("SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) as passed_count"),
+                    DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as pass_rate")
+                )
+                    ->leftJoin('quiz_submissions', 'quiz_submissions.course_quize_id', '=', 'course_quizes.id')
+                    ->groupBy('course_quizes.id', 'course_quizes.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('pass_rate')
+                    ->limit(5)
+                    ->get();
+                $data = [
+                    'total_submissions' => $totalSubmissions,
+                    'passed_submissions' => $passedSubmissions,
+                    'failed_submissions' => $failedSubmissions,
+                    'average_pass_rate' => $averagePassRate,
+                    'average_fail_rate' => $averageFailRate,
+                    'most_challenging_quizzes' => $mostChallengingQuizzes,
+                    'most_successful_quizzes' => $mostSuccessfulQuizzes,
+                ];
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Assessment insights fetched successfully',
+                    'data' => $data,
+                ]);
+                break;
+            case 'exam':
+                $totalSubmissions = ExamSubmission::count();
+                $passedSubmissions = ExamSubmission::where('status', 'passed')->count();
+                $failedSubmissions = ExamSubmission::where('status', 'failed')->count();
+                $averagePassRate = $totalSubmissions > 0 ? round(($passedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                $averageFailRate = $totalSubmissions > 0 ? round(($failedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                // most challenging exams (with highest fail rate)
+                $mostChallengingExams = Exam::select(
+                    'exams.id',
+                    'exams.title',
+                    DB::raw('COUNT(exam_submissions.id) as total'),
+                    DB::raw('SUM(CASE WHEN exam_submissions.status = "failed" THEN 1 ELSE 0 END) as failed_count'),
+                    DB::raw('(SUM(CASE WHEN exam_submissions.status = "failed" THEN 1 ELSE 0 END) / COUNT(exam_submissions.id)) * 100 as fail_rate')
+                )
+                    ->leftJoin('exam_submissions', 'exam_submissions.exam_id', '=', 'exams.id')
+                    ->groupBy('exams.id', 'exams.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('fail_rate')
+                    ->limit(5)
+                    ->get();
+                // most successful exams (with highest pass rate)
+                $mostSuccessfulExams = Exam::select(
+                    'exams.id',
+                    'exams.title',
+                    DB::raw('COUNT(exam_submissions.id) as total'),
+                    DB::raw('SUM(CASE WHEN exam_submissions.status = "passed" THEN 1 ELSE 0 END) as passed_count'),
+                    DB::raw('(SUM(CASE WHEN exam_submissions.status = "passed" THEN 1 ELSE 0 END) / COUNT(exam_submissions.id)) * 100 as pass_rate')
+                )
+                    ->leftJoin('exam_submissions', 'exam_submissions.exam_id', '=', 'exams.id')
+                    ->groupBy('exams.id', 'exams.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('pass_rate')
+                    ->limit(5)
+                    ->get();
+                $data = [
+                    'total_submissions' => $totalSubmissions,
+                    'passed_submissions' => $passedSubmissions,
+                    'failed_submissions' => $failedSubmissions,
+                    'average_pass_rate' => $averagePassRate,
+                    'average_fail_rate' => $averageFailRate,
+                    'most_challenging_exams' => $mostChallengingExams,
+                    'most_successful_exams' => $mostSuccessfulExams,
+                ];
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Assessment insights fetched successfully',
+                    'data' => $data,
+                ]);
+                break;
+            case 'project':
+                $totalSubmissions = ProjectSubmission::count();
+                $passedSubmissions = ProjectSubmission::where('status', 'passed')->count();
+                $failedSubmissions = ProjectSubmission::where('status', 'failed')->count();
+                $averagePassRate = $totalSubmissions > 0 ? round(($passedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                $averageFailRate = $totalSubmissions > 0 ? round(($failedSubmissions / $totalSubmissions) * 100, 2) : 0;
+                // most challenging projects (with highest fail rate)
+                $mostChallengingProjects = Project::select(
+                    'projects.id',
+                    'projects.title',
+                    DB::raw('COUNT(project_submissions.id) as total'),
+                    DB::raw('SUM(CASE WHEN project_submissions.status = "failed" THEN 1 ELSE 0 END) as failed_count'),
+                    DB::raw('(SUM(CASE WHEN project_submissions.status = "failed" THEN 1 ELSE 0 END) / COUNT(project_submissions.id)) * 100 as fail_rate')
+                )
+                    ->leftJoin('project_submissions', 'project_submissions.project_id', '=', 'projects.id')
+                    ->groupBy('projects.id', 'projects.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('fail_rate')
+                    ->limit(5)
+                    ->get();
+                // most successful projects (with highest pass rate)
+                $mostSuccessfulProjects = Project::select(
+                    'projects.id',
+                    'projects.title',
+                    DB::raw('COUNT(project_submissions.id) as total'),
+                    DB::raw('SUM(CASE WHEN project_submissions.status = "passed" THEN 1 ELSE 0 END) as passed_count'),
+                    DB::raw('(SUM(CASE WHEN project_submissions.status = "passed" THEN 1 ELSE 0 END) / COUNT(project_submissions.id)) * 100 as pass_rate')
+                )
+                    ->leftJoin('project_submissions', 'project_submissions.project_id', '=', 'projects.id')
+                    ->groupBy('projects.id', 'projects.title')
+                    ->having('total', '>', 0)
+                    ->orderByDesc('pass_rate')
+                    ->limit(5)
+                    ->get();
+                $data = [
+                    'total_submissions' => $totalSubmissions,
+                    'passed_submissions' => $passedSubmissions,
+                    'failed_submissions' => $failedSubmissions,
+                    'average_pass_rate' => $averagePassRate,
+                    'average_fail_rate' => $averageFailRate,
+                    'most_challenging_projects' => $mostChallengingProjects,
+                    'most_successful_projects' => $mostSuccessfulProjects,
+                ];
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Assessment insights fetched successfully',
+                    'data' => $data,
+                ]);
+                break;
+            default:
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid assessment type. Choose quiz, exam, or project.',
+                ], 400);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Assessment insights fetched successfully',
+            'data' => [
+                'total_submissions' => $totalSubmissions,
+                'passed_submissions' => $passedSubmissions,
+                'failed_submissions' => $failedSubmissions,
+            ],
         ]);
     }
 }

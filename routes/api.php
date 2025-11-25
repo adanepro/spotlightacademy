@@ -92,6 +92,12 @@ Route::group([
         Route::get('activity-trend', [AnalyticsController::class, 'activityTrend']);
         Route::get('course-completion-status', [AnalyticsController::class, 'courseCompletionStatus']);
         Route::get('analytics-overview', [AnalyticsController::class, 'Overview']);
+        Route::get('assessment-overview', [AnalyticsController::class, 'assessmentOverview']);
+        Route::get('assessment-insights', [AnalyticsController::class, 'assessmentInsights']);
+        Route::get('assessment-status-distribution', [AnalyticsController::class, 'assessmentStatusDistribution']);
+        Route::get('quiz-participation', [AnalyticsController::class, 'quizParticipation']);
+        Route::get('top-performing-students', [AnalyticsController::class, 'topPerformingStudents']);
+        Route::get('engagement-ststus-overview', [AnalyticsController::class, 'engagementOverview']);
 
         Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
         Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
