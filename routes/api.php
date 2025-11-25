@@ -97,7 +97,7 @@ Route::group([
         Route::get('assessment-status-distribution', [AnalyticsController::class, 'assessmentStatusDistribution']);
         Route::get('quiz-participation', [AnalyticsController::class, 'quizParticipation']);
         Route::get('top-performing-students', [AnalyticsController::class, 'topPerformingStudents']);
-        Route::get('engagement-ststus-overview', [AnalyticsController::class, 'engagementOverview']);
+        Route::get('engagement-status-overview', [AnalyticsController::class, 'engagementOverview']);
 
         Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
         Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
