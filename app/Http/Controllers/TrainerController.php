@@ -31,6 +31,7 @@ class TrainerController extends Controller
                     'trainer_id' => $user->trainer->id ?? null,
                     'user_id' => $user->id,
                     'institution_id' => $user->trainer->institution_id ?? null,
+                    'institution_name' => $user->trainer->institution->name ?? null,
                     'courses' => optional($user->trainer)->courses?->map(function ($course) {
                         return [
                             'id' => $course->id,

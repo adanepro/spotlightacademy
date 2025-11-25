@@ -9,6 +9,7 @@ use App\Models\EnrollmentLecture;
 use App\Models\EnrollmentModule;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
+use App\Models\Institution;
 use App\Models\Module;
 use App\Models\Project;
 use App\Models\ProjectSubmission;
@@ -850,5 +851,69 @@ class AnalyticsController extends Controller
                     'message' => 'Invalid assessment type. Choose quiz, exam, or project.',
                 ], 400);
         }
+    }
+
+    /* =====================================
+     *  Institution Insight
+     * ===================================== */
+
+    public function institutionOverview()
+    {
+        $totalInstitutions = Institution::count();
+        $totalStudents = Student::count();
+
+        // Student count per institution
+        $studentCountPerInstitution = Institution::withCount('students')->get();
+
+        // Activity count per student (user_id = causer_id)
+        $studentActivities = DB::table('activity_log')
+            ->select('causer_id', DB::raw('COUNT(*) as activity_count'))
+            ->whereNotNull('causer_id')
+            ->whereDate('created_at', '>=', now()->subWeek())
+            ->groupBy('causer_id')
+            ->pluck('activity_count', 'causer_id');
+
+        // Load institutions + students + users
+        $institutions = Institution::with(['students.user'])
+            ->withCount('students')
+            ->get();
+
+        // Compute engagement
+        $averageStudentEngagement = $institutions->map(function ($institution) use ($studentActivities) {
+            $totalActivities = 0;
+
+            foreach ($institution->students as $student) {
+                $userId = $student->user->id;
+                $totalActivities += $studentActivities[$userId] ?? 0;
+            }
+
+            $averageEngagement = $institution->students_count > 0
+                ? round($totalActivities / $institution->students_count, 2)
+                : 0;
+
+            return [
+                'institution_id' => $institution->id,
+                'institution_name' => $institution->name,
+                'student_count' => $institution->students_count,
+                'average_student_engagement' => $averageEngagement,
+            ];
+        });
+
+        $topInstitutionsByEngagement = $averageStudentEngagement
+            ->sortByDesc('average_student_engagement')
+            ->take(5)
+            ->values();
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => 'Institution overview fetched successfully',
+            'data'     => [
+                'total_institutions' => $totalInstitutions,
+                'total_students' => $totalStudents,
+                'student_count_per_institution' => $studentCountPerInstitution,
+                'top_institutions_by_engagement' => $topInstitutionsByEngagement,
+                'average_student_engagement_per_institution' => $averageStudentEngagement,
+            ],
+        ]);
     }
 }
