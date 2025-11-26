@@ -634,7 +634,7 @@ class AnalyticsController extends Controller
         $quizzes = CourseQuize::where('created_by', $trainerId)->get();
 
         // map with submission count and participation rate
-        $data = $quizzes->map(function ($quiz) {
+        $data = $quizzes->map(function ($quiz, $index) {
             $submissionCount = QuizSubmission::where('quiz_id', $quiz->id)->count();
             // passed count
             $passedCount = QuizSubmission::where('quiz_id', $quiz->id)->where('status', 'passed')->count();
@@ -644,11 +644,10 @@ class AnalyticsController extends Controller
 
             $passRate = $submissionCount > 0 ? round(($passedCount / $submissionCount) * 100, 2) : 0;
 
-
             return [
                 'quiz_id' => $quiz->id,
-                'quiz_name' => $quiz->title,
-                'attmpted' => $submissionCount,
+                'quiz_title' => 'Quiz-' . ($index + 1),
+                'attempted' => $submissionCount,
                 'passed' => $passedCount,
                 'failed' => $failedCount,
                 'pass_rate' => $passRate,
@@ -768,35 +767,39 @@ class AnalyticsController extends Controller
                 $failedSubmissions = QuizSubmission::where('status', 'failed')->count();
                 $averagePassRate = $totalSubmissions > 0 ? round(($passedSubmissions / $totalSubmissions) * 100, 2) : 0;
                 $averageFailRate = $totalSubmissions > 0 ? round(($failedSubmissions / $totalSubmissions) * 100, 2) : 0;
-                // most challenging quizzes (with highest fail rate)
-                $mostChallengingQuizzes = CourseQuize::select(
-                    'course_quizes.id',
-                    'course_quizes.questions',
-                    DB::raw('COUNT(*) as total'),
-                    DB::raw("SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) as failed_count"),
-                    DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as fail_rate")
-                )
-                    ->leftJoin('quiz_submissions', 'quiz_submissions.quiz_id', '=', 'course_quizes.id')
-                    ->groupBy('course_quizes.id')
-                    ->having('total', '>', 0)
-                    ->orderByDesc('fail_rate')
-                    ->limit(5)
-                    ->get();
 
-                // most successful quizzes (with highest pass rate)
-                $mostSuccessfulQuizzes = CourseQuize::select(
-                    'course_quizes.id',
-                    'course_quizes.questions',
-                    DB::raw('COUNT(*) as total'),
-                    DB::raw("SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) as passed_count"),
-                    DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as pass_rate")
-                )
-                    ->leftJoin('quiz_submissions', 'quiz_submissions.course_quize_id', '=', 'course_quizes.id')
-                    ->groupBy('course_quizes.id')
-                    ->having('total', '>', 0)
-                    ->orderByDesc('pass_rate')
-                    ->limit(5)
-                    ->get();
+                $quizzes = CourseQuize::all(); // get all quizzes
+
+                // most challenging quizzes (highest fail rate)
+                $mostChallengingQuizzes = $quizzes->map(function ($quiz, $index) {
+                    $total = QuizSubmission::where('quiz_id', $quiz->id)->count();
+                    $failedCount = QuizSubmission::where('quiz_id', $quiz->id)->where('status', 'failed')->count();
+                    $failRate = $total > 0 ? round(($failedCount / $total) * 100, 2) : 0;
+
+                    return [
+                        'quiz_id' => $quiz->id,
+                        'quiz_title' => 'Quiz-' . ($index + 1), // manually add title
+                        'total_submissions' => $total,
+                        'failed_count' => $failedCount,
+                        'fail_rate' => $failRate,
+                    ];
+                })->sortByDesc('fail_rate')->take(5)->values();
+
+                // most successful quizzes (highest pass rate)
+                $mostSuccessfulQuizzes = $quizzes->map(function ($quiz, $index) {
+                    $total = QuizSubmission::where('quiz_id', $quiz->id)->count();
+                    $passedCount = QuizSubmission::where('quiz_id', $quiz->id)->where('status', 'passed')->count();
+                    $passRate = $total > 0 ? round(($passedCount / $total) * 100, 2) : 0;
+
+                    return [
+                        'quiz_id' => $quiz->id,
+                        'quiz_title' => 'Quiz-' . ($index + 1),
+                        'total_submissions' => $total,
+                        'passed_count' => $passedCount,
+                        'pass_rate' => $passRate,
+                    ];
+                })->sortByDesc('pass_rate')->take(5)->values();
+
                 $data = [
                     'total_submissions' => $totalSubmissions,
                     'passed_submissions' => $passedSubmissions,
@@ -806,6 +809,7 @@ class AnalyticsController extends Controller
                     'most_challenging_quizzes' => $mostChallengingQuizzes,
                     'most_successful_quizzes' => $mostSuccessfulQuizzes,
                 ];
+
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Assessment insights fetched successfully',
