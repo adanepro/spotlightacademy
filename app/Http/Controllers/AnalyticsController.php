@@ -498,6 +498,60 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    public function topPerformers()
+    {
+        // Top 5 students with highest number of completed enrollments
+        $topStudents = Student::whereHas('enrollments', function ($query) {
+            $query->where('status', 'completed');
+        })
+            ->withCount(['enrollments as completed_enrollments_count' => function ($query) {
+                $query->where('status', 'completed');
+            }])
+            ->orderByDesc('completed_enrollments_count')
+            ->take(5)
+            ->get()
+            ->map(function ($student) {
+                return [
+                    'student_id' => $student->id,
+                    'student_name' => $student->user->full_name ?? 'Unknown',
+                    'completed_enrollments_count' => $student->completed_enrollments_count,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Top performing students fetched successfully',
+            'data' => $topStudents,
+        ]);
+    }
+
+    public function topCourse()
+    {
+        // Top 5 courses with highest number of completed enrollments
+        $topCourses = Course::whereHas('enrollments', function ($query) {
+            $query->where('status', 'completed');
+        })
+            ->withCount(['enrollments as completed_enrollments_count' => function ($query) {
+                $query->where('status', 'completed');
+            }])
+            ->orderByDesc('completed_enrollments_count')
+            ->take(5)
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'course_id' => $course->id,
+                    'course_name' => $course->title,
+                    'completed_enrollments_count' => $course->completed_enrollments_count,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Top courses fetched successfully',
+            'data' => $topCourses,
+        ]);
+    }
+
     /* =====================================
      *  Assessment Participation
      * ===================================== */
