@@ -635,12 +635,12 @@ class AnalyticsController extends Controller
 
         // map with submission count and participation rate
         $data = $quizzes->map(function ($quiz) {
-            $submissionCount = QuizSubmission::where('course_quize_id', $quiz->id)->count();
+            $submissionCount = QuizSubmission::where('quiz_id', $quiz->id)->count();
             // passed count
-            $passedCount = QuizSubmission::where('course_quize_id', $quiz->id)->where('status', 'passed')->count();
+            $passedCount = QuizSubmission::where('quiz_id', $quiz->id)->where('status', 'passed')->count();
 
             // failed count
-            $failedCount = QuizSubmission::where('course_quize_id', $quiz->id)->where('status', 'failed')->count();
+            $failedCount = QuizSubmission::where('quiz_id', $quiz->id)->where('status', 'failed')->count();
 
             $passRate = $submissionCount > 0 ? round(($passedCount / $submissionCount) * 100, 2) : 0;
 
@@ -740,9 +740,9 @@ class AnalyticsController extends Controller
             ->leftJoin('users', 'students.user_id', '=', 'users.id')
             ->leftJoin('enrollments', 'enrollments.student_id', '=', 'students.id')
 
-            ->leftJoin('quiz_submissions', 'quiz_submissions.student_id', '=', 'students.id')
-            ->leftJoin('exam_submissions', 'exam_submissions.student_id', '=', 'students.id')
-            ->leftJoin('project_submissions', 'project_submissions.student_id', '=', 'students.id')
+            ->leftJoin('quiz_submissions', 'quiz_submissions.enrollment_id', '=', 'enrollments.id')
+            ->leftJoin('exam_submissions', 'exam_submissions.enrollment_id', '=', 'enrollments.id')
+            ->leftJoin('project_submissions', 'project_submissions.enrollment_id', '=', 'enrollments.id')
 
             ->groupBy('students.id', 'users.full_name', 'enrollments.progress')
             ->orderByDesc('total_passed_assessments')
@@ -771,13 +771,13 @@ class AnalyticsController extends Controller
                 // most challenging quizzes (with highest fail rate)
                 $mostChallengingQuizzes = CourseQuize::select(
                     'course_quizes.id',
-                    'course_quizes.title',
+                    'course_quizes.questions',
                     DB::raw('COUNT(*) as total'),
                     DB::raw("SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) as failed_count"),
                     DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'failed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as fail_rate")
                 )
-                    ->leftJoin('quiz_submissions', 'quiz_submissions.course_quize_id', '=', 'course_quizes.id')
-                    ->groupBy('course_quizes.id', 'course_quizes.title')
+                    ->leftJoin('quiz_submissions', 'quiz_submissions.quiz_id', '=', 'course_quizes.id')
+                    ->groupBy('course_quizes.id')
                     ->having('total', '>', 0)
                     ->orderByDesc('fail_rate')
                     ->limit(5)
@@ -786,13 +786,13 @@ class AnalyticsController extends Controller
                 // most successful quizzes (with highest pass rate)
                 $mostSuccessfulQuizzes = CourseQuize::select(
                     'course_quizes.id',
-                    'course_quizes.title',
+                    'course_quizes.questions',
                     DB::raw('COUNT(*) as total'),
                     DB::raw("SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) as passed_count"),
                     DB::raw("(SUM(CASE WHEN quiz_submissions.status = 'passed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) as pass_rate")
                 )
                     ->leftJoin('quiz_submissions', 'quiz_submissions.course_quize_id', '=', 'course_quizes.id')
-                    ->groupBy('course_quizes.id', 'course_quizes.title')
+                    ->groupBy('course_quizes.id')
                     ->having('total', '>', 0)
                     ->orderByDesc('pass_rate')
                     ->limit(5)
