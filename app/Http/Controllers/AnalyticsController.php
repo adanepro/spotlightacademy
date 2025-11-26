@@ -464,28 +464,39 @@ class AnalyticsController extends Controller
         ]);
     }
 
-    public function moduleCompletionRate()
+    public function moduleCompletionRate(Request $request)
     {
-        // module completion rate per module list
-        $modules = Module::withCount('enrollments')->get();
-        $modules = $modules->map(function ($module) {
-            $completedEnrollments = $module->enrollments()->whereHas('modules', function ($query) {
-                $query->where('status', 'completed');
-            })->count();
+        $perPage = $request->per_page ?? 10;
+        $page = $request->page ?? 1;
+
+        // Get modules with enrollments count
+        $modulesQuery = Module::withCount('enrollments');
+
+        // Paginate
+        $paginatedModules = $modulesQuery->paginate($perPage, ['*'], 'page', $page);
+
+        // Map the paginated items
+        $modules = $paginatedModules->getCollection()->map(function ($module) {
+            $completedEnrollments = $module->enrollments()->where('status', 'completed')->count();
 
             return [
                 'module_id' => $module->id,
                 'module_name' => $module->title,
                 'total_enrollments' => $module->enrollments_count,
                 'completed_enrollments' => $completedEnrollments,
-                'completion_rate' => $module->enrollments_count > 0 ? round(($completedEnrollments / $module->enrollments_count) * 100, 2) : 0,
+                'completion_rate' => $module->enrollments_count > 0
+                    ? round(($completedEnrollments / $module->enrollments_count) * 100, 2)
+                    : 0,
             ];
         });
+
+        // Replace the collection on the paginator
+        $paginatedModules->setCollection($modules);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Module completion rate fetched successfully',
-            'data' => $modules,
+            'data' => $paginatedModules,
         ]);
     }
 
