@@ -143,6 +143,7 @@ class ActivityLogController extends Controller
                     'student_id' => $student->id ?? null,
                     'student_name' => $student->user->full_name ?? 'Unknown',
                     'total_activities' => $item->total_activities,
+                    'institution_name' => $student->institution->name ?? 'Unknown',
                 ];
             })
             ->filter(fn($item) => $item['student_id'] !== null)
@@ -166,6 +167,7 @@ class ActivityLogController extends Controller
                     'student_id' => $student->id ?? null,
                     'student_name' => $student->user->full_name ?? 'Unknown',
                     'total_activities' => $item->total_activities,
+                    'institution_name' => $student->institution->name ?? 'Unknown',
                 ];
             })
             ->filter(fn($item) => $item['student_id'] !== null)

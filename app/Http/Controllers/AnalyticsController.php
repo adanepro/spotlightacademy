@@ -470,7 +470,7 @@ class AnalyticsController extends Controller
         $page = $request->page ?? 1;
 
         // Get modules with enrollments count
-        $modulesQuery = Module::withCount('enrollments');
+        $modulesQuery = Module::withCount('enrollmentModules');
 
         // Paginate
         $paginatedModules = $modulesQuery->paginate($perPage, ['*'], 'page', $page);

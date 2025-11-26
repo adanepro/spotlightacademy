@@ -30,4 +30,9 @@ class Module extends Model
     {
         return $this->hasMany(CourseQuize::class);
     }
+
+    public function enrollmentModules()
+    {
+        return $this->hasMany(EnrollmentModule::class);
+    }
 }
