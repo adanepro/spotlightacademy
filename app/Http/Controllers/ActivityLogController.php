@@ -73,6 +73,7 @@ class ActivityLogController extends Controller
                     'student_id' => $activity->causer->student->id ?? null,
                     'student_name' => $activity->causer->full_name ?? 'Unknown',
                     'total_activities' => $activity->total_activities,
+                    'institution_name' => $activity->causer->student->institution->name ?? 'Unknown',
                 ];
             })
             ->filter(function ($item) {
@@ -143,6 +144,7 @@ class ActivityLogController extends Controller
                     'student_id'        => $item->causer->student->id ?? null,
                     'student_name'      => $item->causer->full_name ?? 'Unknown',
                     'total_activities'  => $item->total_activities,
+                    'institution_name'  => $item->causer->student->institution->name ?? 'Unknown',
                 ];
             })
             ->filter(fn($item) => $item['student_id'] !== null)
@@ -166,6 +168,7 @@ class ActivityLogController extends Controller
                     'student_id'        => $item->causer->student->id ?? null,
                     'student_name'      => $item->causer->full_name ?? 'Unknown',
                     'total_activities'  => $item->total_activities,
+                    'institution_name'  => $item->causer->student->institution->name ?? 'Unknown',
                 ];
             })
             ->filter(fn($item) => $item['student_id'] !== null)
