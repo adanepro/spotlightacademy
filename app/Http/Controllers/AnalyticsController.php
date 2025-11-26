@@ -628,6 +628,7 @@ class AnalyticsController extends Controller
     public function quizParticipation(Request $request)
     {
         $defaultTrainerId = Trainer::first()->id;
+        dd($defaultTrainerId);
 
         // Use trainer_id from request OR default one
         $trainerId = $request->trainer_id ?? $defaultTrainerId;
