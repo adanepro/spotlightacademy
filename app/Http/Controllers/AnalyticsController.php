@@ -469,7 +469,7 @@ class AnalyticsController extends Controller
         $perPage = $request->per_page ?? 10;
         $page = $request->page ?? 1;
 
-        // Get modules with enrollments count
+        // Get modules with enrollmentModules count
         $modulesQuery = Module::withCount('enrollmentModules');
 
         // Paginate
@@ -477,15 +477,15 @@ class AnalyticsController extends Controller
 
         // Map the paginated items
         $modules = $paginatedModules->getCollection()->map(function ($module) {
-            $completedEnrollments = $module->enrollments()->where('status', 'completed')->count();
+            $completedEnrollments = $module->enrollmentModules()->where('status', 'completed')->count();
 
             return [
                 'module_id' => $module->id,
                 'module_name' => $module->title,
-                'total_enrollments' => $module->enrollments_count,
+                'total_enrollments' => $module->enrollment_modules_count,
                 'completed_enrollments' => $completedEnrollments,
-                'completion_rate' => $module->enrollments_count > 0
-                    ? round(($completedEnrollments / $module->enrollments_count) * 100, 2)
+                'completion_rate' => $module->enrollment_modules_count > 0
+                    ? round(($completedEnrollments / $module->enrollment_modules_count) * 100, 2)
                     : 0,
             ];
         });
