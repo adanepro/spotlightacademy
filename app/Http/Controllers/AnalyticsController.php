@@ -464,39 +464,37 @@ class AnalyticsController extends Controller
         ]);
     }
 
-    public function moduleCompletionRate(Request $request)
+    public function moduleCompletionRate()
     {
-        $perPage = $request->per_page ?? 10;
-        $page = $request->page ?? 1;
+        // Get all modules with enrollmentModules count
+        $modules = Module::withCount('enrollmentModules')->get();
 
-        // Get modules with enrollmentModules count
-        $modulesQuery = Module::withCount('enrollmentModules');
+        // Calculate completion rate for each module
+        $modules = $modules->map(function ($module) {
+            $completedEnrollments = $module->enrollmentModules()
+                ->where('status', 'completed')
+                ->count();
 
-        // Paginate
-        $paginatedModules = $modulesQuery->paginate($perPage, ['*'], 'page', $page);
-
-        // Map the paginated items
-        $modules = $paginatedModules->getCollection()->map(function ($module) {
-            $completedEnrollments = $module->enrollmentModules()->where('status', 'completed')->count();
+            $completionRate = $module->enrollment_modules_count > 0
+                ? round(($completedEnrollments / $module->enrollment_modules_count) * 100, 2)
+                : 0;
 
             return [
                 'module_id' => $module->id,
                 'module_name' => $module->title,
                 'total_enrollments' => $module->enrollment_modules_count,
                 'completed_enrollments' => $completedEnrollments,
-                'completion_rate' => $module->enrollment_modules_count > 0
-                    ? round(($completedEnrollments / $module->enrollment_modules_count) * 100, 2)
-                    : 0,
+                'completion_rate' => $completionRate,
             ];
         });
 
-        // Replace the collection on the paginator
-        $paginatedModules->setCollection($modules);
+        // Sort by completion rate descending and take top 5
+        $topModules = $modules->sortByDesc('completion_rate')->take(5)->values();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Module completion rate fetched successfully',
-            'data' => $paginatedModules,
+            'message' => 'Top 5 modules by completion rate fetched successfully',
+            'data' => $topModules,
         ]);
     }
 
