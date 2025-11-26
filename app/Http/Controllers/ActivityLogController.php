@@ -127,61 +127,48 @@ class ActivityLogController extends Controller
         }
 
         // Most active students (top 5)
-        $mostActiveStudents = Activity::select('causer_id', DB::raw('count(*) as total_activities'))
+        $mostActiveStudents = Activity::select('causer_id', DB::raw('COUNT(*) as total_activities'))
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
+            ->where('causer_type', \App\Models\User::class)  // THIS IS CORRECT FOR YOUR DATA
+            ->whereHas('causer.student')                     // ensures the causer is a student
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
             ->groupBy('causer_id')
-            ->orderBy('total_activities', 'desc')
+            ->orderByDesc('total_activities')
             ->limit(5)
-            ->with('causer.student')
+            ->with(['causer.student'])
             ->get()
-            ->map(function ($activity) {
+            ->map(function ($item) {
                 return [
-                    'student_id' => $activity->causer->student->id ?? null,
-                    'student_name' => $activity->causer->full_name ?? 'Unknown',
-                    'total_activities' => $activity->total_activities,
+                    'student_id'        => $item->causer->student->id ?? null,
+                    'student_name'      => $item->causer->full_name ?? 'Unknown',
+                    'total_activities'  => $item->total_activities,
                 ];
             })
-            ->filter(function ($item) {
-                return $item['student_id'] !== null;
-            })
+            ->filter(fn($item) => $item['student_id'] !== null)
             ->values();
 
+
         // Least active students (bottom 5)
-        $leastActiveStudents = Activity::select('causer_id', DB::raw('count(*) as total_activities'))
+        $leastActiveStudents = Activity::select('causer_id', DB::raw('COUNT(*) as total_activities'))
             ->whereNotNull('causer_id')
-            ->whereHasMorph('causer', ['App\Models\User'], function ($query) {
-                $query->whereHas('student');
-            })
-            ->when($fromDate, function ($query, $fromDate) {
-                return $query->whereDate('created_at', '>=', $fromDate);
-            })
-            ->when($toDate, function ($query, $toDate) {
-                return $query->whereDate('created_at', '<=', $toDate);
-            })
+            ->where('causer_type', \App\Models\User::class)  // THIS IS CORRECT FOR YOUR DATA
+            ->whereHas('causer.student')                     // ensures the causer is a student
+            ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
             ->groupBy('causer_id')
             ->orderBy('total_activities', 'asc')
             ->limit(5)
-            ->with('causer.student')
+            ->with(['causer.student'])
             ->get()
-            ->map(function ($activity) {
+            ->map(function ($item) {
                 return [
-                    'student_id' => $activity->causer->student->id ?? null,
-                    'student_name' => $activity->causer->full_name ?? 'Unknown',
-                    'total_activities' => $activity->total_activities,
+                    'student_id'        => $item->causer->student->id ?? null,
+                    'student_name'      => $item->causer->full_name ?? 'Unknown',
+                    'total_activities'  => $item->total_activities,
                 ];
             })
-            ->filter(function ($item) {
-                return $item['student_id'] !== null;
-            })
+            ->filter(fn($item) => $item['student_id'] !== null)
             ->values();
 
         // Most active days (top 7)

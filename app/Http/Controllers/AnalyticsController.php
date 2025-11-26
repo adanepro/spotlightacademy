@@ -377,7 +377,9 @@ class AnalyticsController extends Controller
         $activitiesGrowthPercentage = $totalActivities > 0 ? round(($activitiesGrowth / $totalActivities) * 100, 2) : 0;
 
         // average activities per day
-        $averageActivitiesPerDay = round($totalActivities / now()->diffInDays(now()->subWeek()), 2);
+        $days = now()->subWeek()->diffInDays(now()); // will always give 7
+        $averageActivitiesPerDay = $days > 0 ? round($totalActivities / $days, 2) : 0;
+
         // average activities per day from last week geowth
         $averageActivitiesPerDayFromLastWeekGrowth = Activity::whereDate('created_at', '>=', now()->subWeek())->count();
         $averageActivitiesPerDayFromLastWeekGrowthPercentage = $totalActivities > 0 ? round(($averageActivitiesPerDayFromLastWeekGrowth / $totalActivities) * 100, 2) : 0;
