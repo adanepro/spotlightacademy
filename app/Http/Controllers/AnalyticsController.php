@@ -500,21 +500,27 @@ class AnalyticsController extends Controller
 
     public function topPerformers()
     {
-        // Top 5 students with highest number of completed enrollments
+        // Top 7 students with highest number of completed enrollments
         $topStudents = Student::whereHas('enrollments', function ($query) {
             $query->where('status', 'completed');
         })
             ->withCount(['enrollments as completed_enrollments_count' => function ($query) {
                 $query->where('status', 'completed');
             }])
+            ->withCount('enrollments') // total enrollments
             ->orderByDesc('completed_enrollments_count')
-            ->take(5)
+            ->take(7)
             ->get()
             ->map(function ($student) {
+                $completionRate = $student->enrollments_count > 0
+                    ? round(($student->completed_enrollments_count / $student->enrollments_count) * 100, 2)
+                    : 0;
+
                 return [
                     'student_id' => $student->id,
                     'student_name' => $student->user->full_name ?? 'Unknown',
                     'completed_enrollments_count' => $student->completed_enrollments_count,
+                    'completion_rate' => $completionRate,
                 ];
             });
 
@@ -525,6 +531,7 @@ class AnalyticsController extends Controller
         ]);
     }
 
+
     public function topCourse()
     {
         // Top 5 courses with highest number of completed enrollments
@@ -534,14 +541,20 @@ class AnalyticsController extends Controller
             ->withCount(['enrollments as completed_enrollments_count' => function ($query) {
                 $query->where('status', 'completed');
             }])
+            ->withCount('enrollments') // total enrollments
             ->orderByDesc('completed_enrollments_count')
             ->take(5)
             ->get()
             ->map(function ($course) {
+                $completionRate = $course->enrollments_count > 0
+                    ? round(($course->completed_enrollments_count / $course->enrollments_count) * 100, 2)
+                    : 0;
+
                 return [
                     'course_id' => $course->id,
                     'course_name' => $course->title,
                     'completed_enrollments_count' => $course->completed_enrollments_count,
+                    'completion_rate' => $completionRate,
                 ];
             });
 
@@ -551,6 +564,7 @@ class AnalyticsController extends Controller
             'data' => $topCourses,
         ]);
     }
+
 
     /* =====================================
      *  Assessment Participation
@@ -676,7 +690,7 @@ class AnalyticsController extends Controller
                     'count' => $item->count,
                 ];
             });
-        
+
         // exam status distribution
         $examStatusDistribution = ExamSubmission::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
@@ -708,7 +722,7 @@ class AnalyticsController extends Controller
                     'status' => $item->status,
                     'count' => $item->count,
                 ];
-        });
+            });
 
         // project status distribution
         $projectStatusDistribution = ProjectSubmission::select('status', DB::raw('count(*) as count'))
