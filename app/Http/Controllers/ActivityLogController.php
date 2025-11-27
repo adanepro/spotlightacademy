@@ -517,80 +517,53 @@ class ActivityLogController extends Controller
 
     public function getInstitutionLevelInsights(Request $request)
     {
-        // Get date filters from request
         $fromDate = $request->from;
         $toDate = $request->to;
 
-        // Get all institutions with their metrics
+        // Get all institutions
         $institutions = Institution::all();
 
         $institutionInsights = $institutions->map(function ($institution) use ($fromDate, $toDate) {
-            // Active students per institution (students who have any activity)
+
+            // Active students: students with any activity within date range
             $activeStudentsCount = Student::where('institution_id', $institution->id)
-                ->whereHas('user', function ($query) use ($fromDate, $toDate) {
-                    $query->whereHas('activities', function ($q) use ($fromDate, $toDate) {
-                        $q->when($fromDate, function ($query, $fromDate) {
-                            return $query->whereDate('created_at', '>=', $fromDate);
-                        })
-                            ->when($toDate, function ($query, $toDate) {
-                                return $query->whereDate('created_at', '<=', $toDate);
-                            });
-                    });
+                ->whereHas('user.activities', function ($q) use ($fromDate, $toDate) {
+                    $q->when($fromDate, fn($query) => $query->whereDate('created_at', '>=', $fromDate))
+                        ->when($toDate, fn($query) => $query->whereDate('created_at', '<=', $toDate));
                 })
                 ->count();
 
-            // Total students in institution
+            // Total students
             $totalStudents = Student::where('institution_id', $institution->id)->count();
 
-            // Average student engagement per institution (average activities per student)
-            $totalActivities = Activity::whereHasMorph('causer', ['App\Models\User'], function ($query) use ($institution) {
-                $query->whereHas('student', function ($q) use ($institution) {
-                    $q->where('institution_id', $institution->id);
-                });
-            })
-                ->when($fromDate, function ($query, $fromDate) {
-                    return $query->whereDate('created_at', '>=', $fromDate);
-                })
-                ->when($toDate, function ($query, $toDate) {
-                    return $query->whereDate('created_at', '<=', $toDate);
-                })
+            // Total activities by students
+            $totalActivities = Activity::whereHasMorph(
+                'causer',
+                [\App\Models\User::class],
+                fn($query) => $query->whereHas('student', fn($q) => $q->where('institution_id', $institution->id))
+            )
+                ->when($fromDate, fn($query) => $query->whereDate('created_at', '>=', $fromDate))
+                ->when($toDate, fn($query) => $query->whereDate('created_at', '<=', $toDate))
                 ->count();
 
-            $averageEngagement = $totalStudents > 0
-                ? round($totalActivities / $totalStudents, 2)
-                : 0;
+            $averageEngagement = $totalStudents > 0 ? round($totalActivities / $totalStudents, 2) : 0;
 
-            // Trainer activity per institution
-            $trainers = Trainer::where('institution_id', $institution->id)->pluck('id');
+            // Trainer activity
+            $trainerIds = Trainer::where('institution_id', $institution->id)->pluck('id');
 
-            // Projects created by trainers
-            $projectsCreated = Project::whereIn('created_by', $trainers)
-                ->when($fromDate, function ($query, $fromDate) {
-                    return $query->whereDate('created_at', '>=', $fromDate);
-                })
-                ->when($toDate, function ($query, $toDate) {
-                    return $query->whereDate('created_at', '<=', $toDate);
-                })
+            $projectsCreated = Project::whereIn('created_by', $trainerIds)
+                ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+                ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
                 ->count();
 
-            // Exams created by trainers
-            $examsCreated = Exam::whereIn('created_by', $trainers)
-                ->when($fromDate, function ($query, $fromDate) {
-                    return $query->whereDate('created_at', '>=', $fromDate);
-                })
-                ->when($toDate, function ($query, $toDate) {
-                    return $query->whereDate('created_at', '<=', $toDate);
-                })
+            $examsCreated = Exam::whereIn('created_by', $trainerIds)
+                ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+                ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
                 ->count();
 
-            // Quizzes added by trainers
-            $quizzesAdded = CourseQuize::whereIn('created_by', $trainers)
-                ->when($fromDate, function ($query, $fromDate) {
-                    return $query->whereDate('created_at', '>=', $fromDate);
-                })
-                ->when($toDate, function ($query, $toDate) {
-                    return $query->whereDate('created_at', '<=', $toDate);
-                })
+            $quizzesAdded = CourseQuize::whereIn('created_by', $trainerIds)
+                ->when($fromDate, fn($q) => $q->whereDate('created_at', '>=', $fromDate))
+                ->when($toDate, fn($q) => $q->whereDate('created_at', '<=', $toDate))
                 ->count();
 
             return [
@@ -604,7 +577,7 @@ class ActivityLogController extends Controller
                 'average_student_engagement' => $averageEngagement,
                 'total_activities' => $totalActivities,
                 'trainer_activity' => [
-                    'total_trainers' => $trainers->count(),
+                    'total_trainers' => $trainerIds->count(),
                     'projects_created' => $projectsCreated,
                     'exams_created' => $examsCreated,
                     'quizzes_added' => $quizzesAdded,
@@ -637,6 +610,7 @@ class ActivityLogController extends Controller
             ],
         ], 200);
     }
+
 
     public function getGenderBasedAnalytics(Request $request)
     {

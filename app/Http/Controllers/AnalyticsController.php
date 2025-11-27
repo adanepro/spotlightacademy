@@ -750,7 +750,7 @@ class AnalyticsController extends Controller
 
     public function topPerformingStudents(Request $request)
     {
-        $limit = $request->limit ?? 5;
+        $limit = $request->limit ?? 6;
 
         $topStudents = Student::query()
             ->select(
@@ -962,6 +962,12 @@ class AnalyticsController extends Controller
 
         // Student count per institution
         $studentCountPerInstitution = Institution::withCount('students')->get();
+        $studentCountPerInstitution = $studentCountPerInstitution->map(function ($institution) {
+            return [
+                'institution_name' => $institution->name,
+                'student_count' => $institution->students_count,
+            ];
+        });
 
         // Activity count per student (user_id = causer_id)
         $studentActivities = DB::table('activity_log')
@@ -999,7 +1005,7 @@ class AnalyticsController extends Controller
 
         $topInstitutionsByEngagement = $averageStudentEngagement
             ->sortByDesc('average_student_engagement')
-            ->take(5)
+            ->take(1)
             ->values();
 
         return response()->json([

@@ -159,8 +159,8 @@ class User extends Authenticatable implements JWTSubject, HasMedia
         return $this->hasOne(Student::class);
     }
 
-    public function activities(): HasMany
+    public function activities()
     {
-        return $this->hasMany(Activity::class);
+        return $this->morphMany(Activity::class, 'causer');
     }
 }
