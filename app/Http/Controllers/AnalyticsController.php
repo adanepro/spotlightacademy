@@ -1020,4 +1020,29 @@ class AnalyticsController extends Controller
             ],
         ]);
     }
+
+    public function trainerActivityPerInstitution(Request $request)
+    {
+        // filter by institution_id if provided, otherwise take the first one
+        $institutionId = $request->institution_id ?? Institution::first()->id; // if not provided, take the first one
+        $trainers = Trainer::where('institution_id', $institutionId)->get();
+        // map with project, quiz, exam created count
+        $data = $trainers->map(function ($trainer) {
+            $quizCount = CourseQuize::where('created_by', $trainer->id)->count();
+            $examCount = Exam::where('created_by', $trainer->id)->count();
+            $projectCount = Project::where('created_by', $trainer->id)->count();
+            return [
+                'trainer_id' => $trainer->id,
+                'trainer_name' => $trainer->user->full_name,
+                'quiz_count' => $quizCount,
+                'exam_count' => $examCount,
+                'project_count' => $projectCount,
+            ];
+        });
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Trainer activity fetched successfully',
+            'data' => $data,
+        ]);      
+    }
 }

@@ -104,6 +104,7 @@ Route::group([
         Route::get('module-completion-rates', [AnalyticsController::class, 'moduleCompletionRate']);
         Route::get('top-performers', [AnalyticsController::class, 'topPerformers']);
         Route::get('top-courses', [AnalyticsController::class, 'topCourse']);
+        Route::get('trainer-activity', [AnalyticsController::class, 'trainerActivityPerInstitution']);
 
         Route::get('status-overview', [AdminDashBoardController::class, 'getStatusOverview']);
         Route::get('latest-courses', [AdminDashBoardController::class, 'getLatestCourses']);
