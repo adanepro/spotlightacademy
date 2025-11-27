@@ -664,60 +664,75 @@ class AnalyticsController extends Controller
     public function assessmentStatusDistribution()
     {
         // quiz status distribution
+        $quizTotalSubmissions = QuizSubmission::count();
+        $examTotalSubmissions = ExamSubmission::count();
+        $projectTotalSubmissions = ProjectSubmission::count();
         $quizStatusDistribution = QuizSubmission::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
-            ->get();
-
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status,
+                    'count' => $item->count,
+                ];
+            });
+        
         // exam status distribution
         $examStatusDistribution = ExamSubmission::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status,
+                    'count' => $item->count,
+                ];
+            });
 
         // project status distribution
         $projectStatusDistribution = ProjectSubmission::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status,
+                    'count' => $item->count,
+                ];
+            });
 
+        // exam status distribution
+        $examStatusDistribution = ExamSubmission::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status,
+                    'count' => $item->count,
+                ];
+        });
+
+        // project status distribution
+        $projectStatusDistribution = ProjectSubmission::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status,
+                    'count' => $item->count,
+                ];
+            });
         return response()->json([
             'status' => 'success',
             'message' => 'Assessment status distribution fetched successfully',
             'data' => [
+                'quiz_total_submissions' => $quizTotalSubmissions,
+                'exam_total_submissions' => $examTotalSubmissions,
+                'project_total_submissions' => $projectTotalSubmissions,
                 'quiz_status_distribution' => $quizStatusDistribution,
                 'exam_status_distribution' => $examStatusDistribution,
                 'project_status_distribution' => $projectStatusDistribution,
             ],
         ]);
     }
-
-    // public function topPerformingStudents(Request $request)
-    // {
-    //     $requestedLimit = $request->limit ?? 5;
-    //     // top performing students based on passed assessments and also add enrollment progress
-    //     $topStudents = Student::select('students.id', 'users.full_name', 'enrollments.progress', DB::raw('count(quiz_submissions.id) + count(exam_submissions.id) + count(project_submissions.id) as total_passed_assessments'))
-    //         ->leftJoin('enrollments', 'enrollments.student_id', '=', 'students.id')
-    //         ->leftJoin('quiz_submissions', function ($join) {
-    //             $join->on('students.id', '=', 'quiz_submissions.student_id')
-    //                 ->where('quiz_submissions.status', 'passed');
-    //         })
-    //         ->leftJoin('exam_submissions', function ($join) {
-    //             $join->on('students.id', '=', 'exam_submissions.student_id')
-    //                 ->where('exam_submissions.status', 'passed');
-    //         })
-    //         ->leftJoin('project_submissions', function ($join) {
-    //             $join->on('students.id', '=', 'project_submissions.student_id')
-    //                 ->where('project_submissions.status', 'passed');
-    //         })
-    //         ->groupBy('students.id', 'students.name')
-    //         ->orderByDesc('total_passed_assessments')
-    //         ->limit($requestedLimit)
-    //         ->get();
-
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'message' => 'Top performing students fetched successfully',
-    //         'data' => $topStudents,
-    //     ]);
-    // }
 
     public function topPerformingStudents(Request $request)
     {
