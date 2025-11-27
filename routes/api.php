@@ -88,6 +88,7 @@ Route::group([
         Route::get('engagement-overview', [ActivityLogController::class, 'getEngagmentOverview']);
         Route::get('learning-progress', [ActivityLogController::class, 'getLearningProgress']);
         Route::get('session-usage-analytics', [ActivityLogController::class, 'getSessionUsageAnalytics']);
+        Route::get('get-institution-level-insight', [ActivityLogController::class, 'getInstitutionLevelInsights']);
         Route::get('gender-based-analytics', [ActivityLogController::class, 'getGenderBasedAnalytics']);
         Route::get('activity-trend', [AnalyticsController::class, 'activityTrend']);
         Route::get('course-completion-status', [AnalyticsController::class, 'courseCompletionStatus']);
