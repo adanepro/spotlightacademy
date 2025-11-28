@@ -37,7 +37,7 @@ class ExpertController extends Controller
                     'phone_number' => $user->phone_number,
                     'username' => $user->username,
                     'type' => $user->type ?? null,
-                    'course_is_assigned' => $user->expert->courses->isNotEmpty() ?? false,
+                    'course_is_assigned' => $user->expert->is_assigned ?? false,
                 ];
             });
 
