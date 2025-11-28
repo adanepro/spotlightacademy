@@ -27,7 +27,7 @@ class CourseModuleController extends Controller
             ], 403);
         }
 
-        $modules = Module::with(['lectures.materials'])
+        $modules = Module::with(['lectures.materials', 'quizzes'])
             ->where('course_id', $course->id)
             ->latest()
             ->paginate(10);
@@ -42,7 +42,7 @@ class CourseModuleController extends Controller
                 'course_id' => $module->course_id,
                 'lectures_count' => $module->lectures->count(),
                 'lecture_materials_count' => $module->lectures->sum(fn($lecture) => $lecture->materials->count()),
-                'quizes_count' => $module->quizes()->count(),
+                'quizzes_count' => $module->quizzes->count(),
                 'lectures' => $module->lectures->map(function ($lecture) {
                     return [
                         'lecture_id' => $lecture->id,
