@@ -41,4 +41,9 @@ class Lecture extends Model implements HasMedia
     {
         return $this->getMedia('lecture_video')->last()?->getUrl() ?? null;
     }
+
+    public function getOrderAttribute($value)
+    {
+        return (int) $value;
+    }
 }

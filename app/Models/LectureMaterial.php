@@ -35,4 +35,9 @@ class LectureMaterial extends Model implements HasMedia
     {
         return $this->getMedia('lecture_notes')->last()?->getUrl() ?? null;
     }
+
+    public function getOrderAttribute($value)
+    {
+        return (int) $value;
+    }
 }
