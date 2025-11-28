@@ -35,4 +35,10 @@ class Module extends Model
     {
         return $this->hasMany(EnrollmentModule::class);
     }
+
+    // get order attribute as integer
+    public function getOrderAttribute($value)
+    {
+        return (int) $value;
+    }
 }
