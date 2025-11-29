@@ -225,6 +225,7 @@ class TrainerController extends Controller
             'status' => 'sometimes|required|boolean',
             'course_ids' => 'sometimes|nullable|array',
             'course_ids.*' => 'sometimes|nullable|exists:courses,id',
+            'institution_id' => 'sometimes|nullable|exists:institutions,id',
         ]);
 
         try {
@@ -250,6 +251,7 @@ class TrainerController extends Controller
                 'certifications' => $validated['certifications'] ?? null,
                 'bio' => $validated['bio'] ?? null,
                 'status' => $validated['status'] ?? $trainer->status,
+                'institution_id' => $validated['institution_id'] ?? null,
             ]);
 
             if (!empty($trainerData)) {
