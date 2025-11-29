@@ -22,7 +22,7 @@ class ExamSubmission extends Model implements HasMedia
     ];
 
     protected $casts = [
-        'answers' => 'array',
+        'answers' => 'json',
     ];
 
     protected $appends = [
