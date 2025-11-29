@@ -104,7 +104,7 @@ class TrainerController extends Controller
                 'phone_number' => $validated['phone_number'],
                 'username' => User::generateUniqueUsername($validated['full_name']),
                 'password' => Hash::make($validated['password']),
-                'status' => $validated['status'],
+                'status' => 1,
                 'type' => 'trainer',
             ]);
 

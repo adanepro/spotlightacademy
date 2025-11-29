@@ -46,7 +46,7 @@ class Expert extends Model implements HasMedia
 
     public function courses()
     {
-        return $this->hasOne(Course::class);
+        return $this->hasMany(Course::class);
     }
 
     public function modules()

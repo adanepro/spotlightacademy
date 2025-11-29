@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('courses', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('expert_id')->nullable();
+            $table->uuid('expert_id')->unique();
             $table->foreign('expert_id')->references('id')->on('experts')->onDelete('set null');
             $table->text('name');
             $table->longText('description')->nullable();

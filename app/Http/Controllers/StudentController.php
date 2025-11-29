@@ -67,17 +67,15 @@ class StudentController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request['status'] = filter_var($request['status'], FILTER_VALIDATE_BOOLEAN);
             $validated = $request->validate([
                 'full_name' => 'required|string',
                 'email' => 'required|email|unique:users,email',
-                'phone_number' => 'required|string|unique:users,phone_number',
-                'password' => 'nullable|string|min:8',
+                'phone_number' => 'required|string|unique:users,phone_number|starts_with:251|digits:12',
+                'password' => 'required|string|min:8',
                 'institution_id' => 'required|exists:institutions,id',
                 'address' => 'nullable|string',
                 'age' => 'nullable|integer|min:15|max:80',
                 'gender' => 'nullable|string|in:male,female',
-                'status' => 'required|boolean',
             ]);
 
             $user = User::create([
@@ -86,7 +84,7 @@ class StudentController extends Controller
                 'phone_number' => $validated['phone_number'],
                 'username' => User::generateUniqueUsername($validated['full_name']),
                 'password' => Hash::make($validated['password']),
-                'status' => $validated['status'],
+                'status' => 1,
                 'type' => 'student',
             ]);
 
@@ -174,6 +172,8 @@ class StudentController extends Controller
                     'sometimes',
                     'nullable',
                     'string',
+                    'starts_with:251',
+                    'digits:12',
                     Rule::unique('users', 'phone_number')->ignore($student->user->id, 'id'),
                 ],
                 'password' => 'sometimes|nullable|string|min:8',

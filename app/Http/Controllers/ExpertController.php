@@ -78,7 +78,6 @@ class ExpertController extends Controller
             'certifications' => 'nullable|array',
             'certifications.*' => 'nullable|string',
             'bio' => 'nullable|string',
-            'status' => 'required|boolean',
         ]);
         try {
             DB::beginTransaction();
@@ -88,7 +87,7 @@ class ExpertController extends Controller
                 'phone_number' => $validated['phone_number'],
                 'username' => User::generateUniqueUsername($validated['full_name']),
                 'password' => Hash::make($validated['password']),
-                'status' => $validated['status'],
+                'status' => 1,
                 'type' => 'expert',
             ]);
 
@@ -101,7 +100,7 @@ class ExpertController extends Controller
                 'expertise' => $validated['expertise'],
                 'certifications' => $validated['certifications'],
                 'bio' => $validated['bio'],
-                'status' => $validated['status'],
+                'status' => 1,
             ]);
 
             DB::commit();

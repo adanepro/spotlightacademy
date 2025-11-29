@@ -58,7 +58,14 @@ class CourseController extends Controller
             'course_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg',
             'course_trailer' => 'nullable|file|mimes:mp4,avi,flv,wmv,webm',
         ]);
-
+        // Check if expert already has a course
+        $existingCourse = Course::where('expert_id', $validated['expert_id'])->first();
+        if ($existingCourse) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Expert already has a course assigned.',
+            ], 400);
+        }
         try {
 
             DB::beginTransaction();
