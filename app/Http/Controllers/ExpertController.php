@@ -68,7 +68,7 @@ class ExpertController extends Controller
         $validated = $request->validate([
             'full_name' => 'required|string',
             'email' => 'required|email|unique:users,email',
-            'phone_number' => 'required|string|unique:users,phone_number',
+            'phone_number' => 'required|string|unique:users,phone_number|starts_with:251|digits:12',
             'password' => 'required|string|min:8',
             'qualification' => 'nullable|string',
             'social_links' => 'nullable|array',
