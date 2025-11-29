@@ -164,7 +164,7 @@ class ExpertDashboardController extends Controller
 
     public function show(Course $course)
     {
-        $course = $course->load(['modules.lectures.materials']);
+        $course->load(['modules.quizzes', 'modules.lectures.materials', 'projects', 'exams']);
 
         return response()->json([
             'status' => 'success',
@@ -198,6 +198,37 @@ class ExpertDashboardController extends Controller
                                 }),
                             ];
                         }),
+                        'quizzes' => $module->quizzes->map(function ($quiz) {
+                            return [
+                                'module_title' => $quiz->module->title,
+                                'quiz_id' => $quiz->id,
+                                'questions' => $quiz->questions,
+                                'created_by' => $quiz->createdBy->user->full_name,
+                            ];
+                        }),
+                    ];
+                }),
+
+                'projects' => $course->projects->map(function ($project) {
+                    return [
+                        'project_id' => $project->id,
+                        'title' => $project->title,
+                        'description' => $project->description,
+                        'start_date' => $project->start_date,
+                        'end_date' => $project->end_date,
+                        'created_by' => $project->createdBy->user->full_name,
+                    ];
+                }),
+
+                'exams' => $course->exams->map(function ($exam) {
+                    return [
+                        'exam_id' => $exam->id,
+                        'title' => $exam->title,
+                        'questions' => $exam->questions,
+                        'start_date' => $exam->start_date,
+                        'end_date' => $exam->end_date,
+                        'duration_minutes' => $exam->duration_minutes,
+                        'created_by' => $exam->createdBy->user->full_name,
                     ];
                 }),
             ],
