@@ -16,6 +16,7 @@ class ExamSubmission extends Model implements HasMedia
         'exam_id',
         'course_id',
         'status',
+        'answers',
         'review_comments',
         'link',
     ];
@@ -42,7 +43,7 @@ class ExamSubmission extends Model implements HasMedia
     {
         return $this->belongsTo(EnrollmentExam::class);
     }
-    
+
     public function course()
     {
         return $this->belongsTo(Course::class);

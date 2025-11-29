@@ -18,10 +18,20 @@ class ExamSubmissionController extends NotificationController
      */
     public function submit(Request $request, EnrollmentExam $enrollmentExam)
     {
+        // no redundent submission
+        $existingSubmission = ExamSubmission::where('enrollment_exam_id', $enrollmentExam->id)->first();
+        if ($existingSubmission) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You have already submitted this exam.',
+            ], 400);
+        }
         $student = Auth::user()->student;
         $exam = $enrollmentExam->exam;
 
         $data = $request->validate([
+            'answers' => 'nullable|array',
+            'answers.*.answer' => 'nullable|string',
             'exam_file' => 'nullable|file|max:20480', // up to 20MB
             'link' => 'nullable|url',
         ]);
@@ -50,6 +60,7 @@ class ExamSubmissionController extends NotificationController
                 'enrollment_id' => $enrollmentExam->enrollment_id,
                 'course_id' => $enrollmentExam->exam->course_id,
                 'status' => 'submitted',
+                'answers' => $data['answers'] ?? null,
                 'review_comments' => null,
                 'link' => $data['link'] ?? null,
             ]);
